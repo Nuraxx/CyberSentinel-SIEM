@@ -1,0 +1,28 @@
+# Core data science stack
+pandas>=2.2.0
+numpy>=1.26.0
+scikit-learn>=1.4.0
+scipy>=1.11.0
+
+# Visualization
+matplotlib>=3.8.0
+seaborn>=0.13.0
+plotly>=5.18.0
+
+# Notebooks
+jupyter>=1.0.0
+notebook>=7.0.0
+nbconvert>=7.16.0
+ipykernel>=6.29.0
+
+# Imbalanced classification handling (Brute Force / Web Attack / Heartbleed / Infiltration are rare)
+imbalanced-learn>=0.12.0
+
+# Explainable AI
+shap>=0.44.0
+
+# Model persistence
+joblib>=1.3.0
+
+# Deployment
+streamlit>=1.28.0
