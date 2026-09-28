@@ -14,6 +14,7 @@ A machine learning capstone project that analyzes network traffic (CICIDS2017), 
 - [Results](#results)
 - [Screenshots](#screenshots)
 - [Project structure](#project-structure)
+- [AI assistance disclosure](#ai-assistance-disclosure)
 - [Known limitations](#known-limitations)
 - [Future improvements](#future-improvements)
 - [Resume / portfolio summary](#resume--portfolio-summary)
@@ -112,24 +113,39 @@ Every notebook works on a full dataset scale (millions of rows) by first taking 
 
 ## Results
 
-*(This section is intentionally left as a template. Fill it in with your own numbers after running the notebooks against the real dataset -- do not present the illustrative structure below as actual results.)*
+Real numbers from running all three notebooks end-to-end against the full
+CICIDS2017 dataset (150,000-row stratified working sample per track,
+`random_state=42`). Re-running will vary slightly run-to-run for
+non-deterministic steps but should land close to these.
 
 **Classification -- top models by weighted F1:**
 
 | Rank | Model | Accuracy | F1 (weighted) | F1 (macro) | ROC-AUC (OvR) |
 |---|---|---|---|---|---|
-| 1 | *fill in* | | | | |
-| 2 | *fill in* | | | | |
-| 3 | *fill in* | | | | |
+| 1 | Bagging | 0.9875 | 0.9873 | 0.9101 | 0.9992 |
+| 2 | Decision Tree | 0.9859 | 0.9863 | 0.9312 | 0.9956 |
+| 3 | Random Forest | 0.9851 | 0.9856 | 0.8924 | 0.9998 |
+
+Final shipped model: **Bagging** (F1 weighted = 0.9873), selected after
+comparing all 10 baselines, 3 tuned candidates, and 1 SMOTE variant.
 
 **Regression -- top models by R2:**
 
 | Rank | Model | R2 | RMSE | MAE |
 |---|---|---|---|---|
-| 1 | *fill in* | | | |
-| 2 | *fill in* | | | |
+| 1 | Random Forest | 0.9992 | 0.392 | 0.139 |
+| 2 | Decision Tree | 0.9985 | 0.517 | 0.170 |
 
-**Clustering:** optimal k = *fill in*, best linkage = *fill in*, silhouette = *fill in*.
+Hyperparameter tuning on these top 2 moved Random Forest to R2 = 0.9993 /
+RMSE = 0.348 (a real, if small, improvement -- it was already near-ceiling
+untuned, since the risk score is a deterministic function of these same
+flow features). Final shipped model: **Random Forest**.
+
+**Clustering:** optimal k = **10** (silhouette-selected), best linkage =
+**ward** (the linkage-comparison safeguard correctly rejected "average"
+linkage despite its higher raw silhouette of 0.69, because it dumped 99.1%
+of points into one cluster -- a degenerate, useless split). K-Means
+silhouette = 0.426; Agglomerative (ward) silhouette = 0.453.
 
 ## Screenshots
 
@@ -161,6 +177,18 @@ ML_PROJECT/
 ├── requirements.txt
 └── .gitignore
 ```
+
+## AI assistance disclosure
+
+Generative AI (Claude Code, Anthropic) was used during development of this
+project: implementing/extending the shared `src/` utilities and notebook
+code (preprocessing, the outlier-check and feature-engineering steps,
+model training/tuning, visualizations) across all three tracks, and
+drafting initial EDA observation commentary grounded in this project's
+actual output values. The team reviewed this work and is responsible for
+the final analysis, interpretation, and feature-engineering decisions
+submitted here, consistent with the course's policy that AI may assist
+with code scaffolding but interpretation must be the team's own.
 
 ## Known limitations
 

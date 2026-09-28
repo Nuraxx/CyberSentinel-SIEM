@@ -169,6 +169,72 @@ def scale_features(X_train, X_test):
     return X_train_scaled, X_test_scaled, scaler
 
 
+def check_outliers(df, columns=None, iqr_multiplier=1.5):
+    """
+    Report (does not remove) statistical outliers per numeric column using
+    the IQR rule: values outside [Q1 - k*IQR, Q3 + k*IQR].
+
+    Outliers are reported, not dropped, by design: in network-flow
+    intrusion data, extreme values (packet-flood rates, near-zero flow
+    durations) are frequently the attack signal this project exists to
+    detect, not measurement error. Blanket removal would silently delete
+    rare-attack rows on top of the imbalance the dataset already has.
+    Genuinely invalid values (Infinity/NaN) are already handled in
+    clean_data(); this function is for the remaining, valid-but-extreme
+    values, so a track's notebook can make an informed, justified call
+    about whether to treat them (e.g. via scaling / tree-based models
+    that are naturally robust to them) rather than dropping rows here.
+    """
+    if columns is None:
+        columns = df.select_dtypes(include=[np.number]).columns
+    rows = []
+    for col in columns:
+        q1, q3 = df[col].quantile([0.25, 0.75])
+        iqr = q3 - q1
+        lower, upper = q1 - iqr_multiplier * iqr, q3 + iqr_multiplier * iqr
+        n_out = int(((df[col] < lower) | (df[col] > upper)).sum())
+        rows.append({
+            "feature": col,
+            "n_outliers": n_out,
+            "pct_outliers": round(100 * n_out / len(df), 2),
+            "lower_bound": lower,
+            "upper_bound": upper,
+        })
+    return pd.DataFrame(rows).sort_values("pct_outliers", ascending=False).reset_index(drop=True)
+
+
+def engineer_features(df):
+    """
+    Add engineered feature(s) on top of the raw CICFlowMeter columns.
+
+    `header_payload_ratio` = (fwd_header_length + bwd_header_length) /
+    (total_length_of_fwd_packets + total_length_of_bwd_packets). Legitimate
+    bulk-data flows carry large payloads relative to their fixed per-packet
+    header overhead, so this ratio is small. Reconnaissance-style traffic
+    (port scans, SYN floods) is dominated by packets with little or no
+    payload, so headers make up most of a flow's bytes and this ratio
+    spikes -- a lightweight, interpretable probing signal.
+
+    None of the 78 raw columns expresses this relationship directly
+    (header and payload lengths only exist as separate columns), and it is
+    orthogonal to the packet-rate / byte-rate / flag-anomaly / duration /
+    traffic-asymmetry indicators src/risk_score.py already derives for the
+    regression target, so it contributes new signal rather than restating
+    it. Added here (not per-notebook) so it's computed once and reaches
+    every track through the shared cleaned_dataset.csv.
+    """
+    df = df.copy()
+    header_cols = [c for c in ("fwd_header_length", "bwd_header_length") if c in df.columns]
+    payload_cols = [c for c in ("total_length_of_fwd_packets", "total_length_of_bwd_packets") if c in df.columns]
+    if len(header_cols) == 2 and len(payload_cols) == 2:
+        header_total = df[header_cols[0]] + df[header_cols[1]]
+        payload_total = df[payload_cols[0]] + df[payload_cols[1]]
+        # +1 avoids div-by-zero for zero-payload flows without needing a
+        # separate branch; header/payload byte counts are non-negative.
+        df["header_payload_ratio"] = (header_total / (payload_total + 1)).round(4)
+    return df
+
+
 def stratified_sample(df, label_col, max_total=200_000, min_per_class=200, random_state=RANDOM_STATE):
     """
     Build a stratified subsample that keeps EVERY class fully if it's
