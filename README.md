@@ -14,6 +14,7 @@ A machine learning capstone project that analyzes network traffic (CICIDS2017), 
 - [Results](#results)
 - [Screenshots](#screenshots)
 - [Project structure](#project-structure)
+- [Team & track ownership](#team--track-ownership)
 - [AI assistance disclosure](#ai-assistance-disclosure)
 - [Known limitations](#known-limitations)
 - [Future improvements](#future-improvements)
@@ -177,6 +178,21 @@ ML_PROJECT/
 ├── requirements.txt
 └── .gitignore
 ```
+
+## Team & track ownership
+
+*(Fill in with actual team member names before submission -- placeholder
+structure only, one owner per track per the project's team-responsibility
+guideline. An owner should be able to explain every line of their track's
+notebook during the viva; the shared `src/` modules are common ground
+everyone should understand regardless of track.)*
+
+| Track | Notebook | Owner |
+|---|---|---|
+| EDA & preprocessing | `01_EDA.ipynb` | *fill in* |
+| Classification | `02_Classification.ipynb` | *fill in* |
+| Regression | `03_Regression.ipynb` | *fill in* |
+| Clustering | `04_Clustering.ipynb` | *fill in* |
 
 ## AI assistance disclosure
 
