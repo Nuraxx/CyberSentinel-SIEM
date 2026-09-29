@@ -1,336 +1,269 @@
 # CyberThreat-ML — Project Overview & Viva Guide
+### Aligned to the official 23CSE301 Machine Learning Capstone Guidelines (AY 2026-27)
 
-*A plain-language, verified walkthrough of this capstone project, written for a 3-person team preparing for viva. Every number in this document comes from actually running the project's notebooks — nothing here is invented. Anywhere the repository doesn't explicitly answer a question, it's marked **"Not verified"** instead of guessed.*
+*Written for our 3-person team. Every fact here comes from actually inspecting this repository and running its notebooks — nothing is invented. Wherever the repo doesn't explicitly answer something, it says "Not verified" instead of guessing. Sections A/B/C below separate what kind of claim each part is making, per the official guideline on originality:*
 
----
-
-## PART 1 — Project Introduction
-
-### The 1–2 minute version
-
-Our project is called **CyberThreat-ML**. It looks at real network traffic data and tries to answer three separate questions about it:
-
-1. **What kind of attack is this?** (a classification problem — pick one label out of several attack types, or "normal")
-2. **How risky is this traffic, on a scale of 0 to 100?** (a regression problem — predict a number, not a category)
-3. **Are there hidden behavior patterns in the traffic that we haven't explicitly labeled?** (a clustering problem — group similar traffic together without being told the "right" groups)
-
-**The problem we're solving:** Security teams (SOC analysts) get overwhelmed by huge volumes of network traffic. Traditional intrusion detection often relies on fixed signatures ("if you see exactly this pattern, block it"), which fails against attacks that don't exactly match a known signature. We explore whether *machine learning* — learning patterns directly from real traffic statistics — can help flag attacks, prioritize the risky ones, and surface new behavior patterns automatically.
-
-**Why it matters:** Cyberattacks (denial-of-service floods, brute-force login attempts, port scanning, web attacks, botnets) cause real financial and operational damage, and analysts can't manually review every connection on a busy network. A system that can automatically classify traffic, score its risk, and group similar behaviors helps analysts focus attention where it matters.
-
-**Types of ML problems actually present in this project:**
-- **Classification** — yes (`02_Classification.ipynb`): predicting which of 15 categories a network flow belongs to.
-- **Regression** — yes (`03_Regression.ipynb`): predicting a continuous 0–100 risk score.
-- **Clustering** — yes (`04_Clustering.ipynb`): grouping flows by behavior without using labels.
-
-**Overall objective:** Build one shared, clean dataset, then train and honestly compare multiple algorithms on each of these three tasks, using the *same* evaluation rules (same train/test split, same random seed, real metrics) so the comparisons are fair.
-
-**Expected/useful outcome:** A working, explainable pipeline that could plausibly sit behind a security dashboard — automatically classifying new traffic, giving it a risk score for triage, and flagging clusters of unusual behavior a human analyst might want to investigate. The project also ships a Streamlit dashboard (`app/streamlit_app.py`) that consumes the trained models, though the dashboard itself isn't part of the graded notebooks.
-
-### 30-second version
-
-"We built an intrusion-detection system using a real network-traffic dataset called CICIDS2017. We do three things with it: classify traffic into attack types, predict a custom 0–100 risk score for triage, and cluster traffic to find behavior patterns without using labels. All three use the same cleaned dataset and the same fair-comparison rules — same train/test split, same random seed — so the results are trustworthy, not cherry-picked."
+- **[VERIFIED FACT]** — confirmed by reading the code/notebooks or running them this session.
+- **[ML CONCEPT]** — a general explanation of how an algorithm/metric works, not specific to our data.
+- **[TEAM TO CONFIRM]** — an interpretation or observation that reads the data honestly, but which the team must personally review, understand, and be ready to defend as their own in viva — per the guideline that analysis and interpretation must be original, not just AI-generated text repeated back.
 
 ---
 
-## PART 2 — Dataset Overview
+## 1. Project Introduction
 
-### In plain English
+### A. 30-second introduction
+"Our project, CyberThreat-ML, uses the CICIDS2017 network-traffic dataset to build three ML pipelines: a **regression** model that predicts a 0–100 cybersecurity risk score, a **classification** model that identifies the attack type, and **clustering** that groups traffic by behavior without using labels. All three tracks share one cleaned dataset and follow the same fair-comparison rules — same train/test split, same random seed, real evaluation metrics."
 
-We use a public cybersecurity research dataset called **CICIDS2017**. Think of it like a giant logbook of network connections captured over 5 working days at a university network testbed, where researchers deliberately ran real attacks (denial-of-service floods, brute-force login attempts, port scans, web attacks, and more) alongside normal traffic, and recorded statistics about every connection. We don't get to see the raw packets — we get a spreadsheet where each row is already a summary of one connection.
+### B. 1–2 minute introduction
+"We're using the CICIDS2017 dataset — a real, published cybersecurity research dataset where the Canadian Institute for Cybersecurity captured 5 days of network traffic and deliberately ran attacks (DoS, DDoS, brute-force, port scans, web attacks, botnets) alongside normal traffic, then summarized every connection into flow-level statistics.
 
-### Technical details (verified from the repository)
+The problem: security analysts can't manually inspect every connection on a busy network, and signature-based detection struggles against attacks that don't exactly match a known pattern. We explore whether classical machine learning, trained directly on flow statistics, can help.
+
+Our project covers all three required tracks. **[VERIFIED FACT]** **Regression** predicts a custom-built 0–100 risk score we designed ourselves from behavioral indicators — not a label lookup. **Classification** predicts which of 15 categories (14 attack types + BENIGN) a flow belongs to. **Clustering** groups flows by behavioral similarity with no labels used during fitting, to see if the traffic naturally separates the way we'd expect.
+
+The overall objective is an honest, leakage-free, fairly-compared pipeline — not necessarily the single highest score, but one where every score can be trusted because the same rules were applied everywhere. The useful outcome is a demonstration that flow-level features alone carry enough signal to support triage-style security decisions."
+
+### C. 3–5 minute detailed introduction
+Combine B above, then add:
+
+"Structurally, the project has 4 notebooks. `01_EDA.ipynb` is not one of the three graded tracks itself — it's shared groundwork: it loads and merges the 8 raw CICIDS2017 CSVs, audits and cleans the data once, explores it, and engineers one new feature, so the regression, classification, and clustering notebooks all build on exactly the same, already-cleaned dataset instead of each doing their own (potentially inconsistent) cleaning.
+
+**[VERIFIED FACT]** For regression, all 10 officially required algorithms are trained and compared on the same held-out test split, with hyperparameter tuning and 5-fold cross-validation on the top 2. For classification, all 10 officially required algorithms (5 in Part A: Logistic Regression, KNN, Gaussian Naive Bayes, Decision Tree, SVM; 5 in Part B: Random Forest, AdaBoost, Gradient Boosting, Bagging, MLP) are trained, with a single consolidated comparison table, tuning, and a SMOTE-based imbalance comparison. For clustering, K-Means and Agglomerative Hierarchical Clustering are both fitted with labels withheld, evaluated with Silhouette/Davies-Bouldin/Calinski-Harabasz, and interpreted against real labels only afterward.
+
+**[TEAM TO CONFIRM]** Our headline finding is that this data has a severe, ~190,000:1 class imbalance and a real leakage risk in the `destination_port` column (most attack types sit on one fixed port) — both of which we found ourselves by inspecting the actual data, and both of which shaped concrete design decisions (class weighting, SMOTE, macro-F1 reporting, and an explicit flag to check feature importance against the port finding)."
+
+---
+
+## 2. Official Assignment Structure (from the attached PDF)
+
+**[VERIFIED FACT — from the official PDF, not our repo]**
+
+| Item | Official requirement |
+|---|---|
+| Team size | 3 members |
+| Tracks | Regression, Classification, Clustering |
+| Reviews | Two formal, in-person reviews, 25 marks each (50 total) |
+| Datasets | Assigned by instructor, one per team |
+| Submission | Jupyter Notebook(s) + GitHub repository |
+
+**Review 1** (just before mid-semester exams) — scope: **Full Regression track + Classification Part A**. 25 marks: Dataset & EDA (4), Preprocessing & Feature Engineering (3), Regression Track (9), Classification Part A (3), Presentation (1), Viva (5).
+
+**Review 2** (towards end of semester) — scope: **Classification Part B + Full Clustering track**. 25 marks: Classification Part B (6), Clustering Track (8), Pipeline Integration & Quality (3), Presentation & Viva (8).
+
+Both reviews are in-person; **any team member can be questioned about any part of the work**, not just their own track.
+
+**Bonus (Review 2 only, up to +2, official rubric caps the displayed total at 20 for grading unless the instructor says otherwise):**
+- +1 — a working GUI (Streamlit/Gradio) that accepts input and returns predictions.
+- +1 — that GUI publicly deployed (e.g. Streamlit Community Cloud, Hugging Face Spaces, Render).
+- +2 — both.
+
+---
+
+## 3. Exact Official Algorithm List — What We Actually Implemented, and Results
+
+### Regression (all 10 required — Review 1)
+
+| # | Algorithm | Basic idea [ML CONCEPT] | Why used | Key params tuned/used | Our implementation & actual result [VERIFIED FACT] |
+|---|---|---|---|---|---|
+| 1 | Linear Regression | Fits one straight-line relationship between features and target. | Baseline; coefficients are directly interpretable. | (none) | Trained on all 79 features. R² = 0.7235, RMSE = 7.090, MAE = 4.486. |
+| 2 | Ridge Regression | Linear regression + L2 penalty shrinking coefficients. | Handles the 71 correlated feature pairs found in EDA more gently than plain linear regression. | `alpha=1.0` | R² = 0.5518, RMSE = 9.027, MAE = 4.525 (ranked *lower* than plain Linear Regression in our data — a real, reported result). |
+| 3 | Lasso Regression | Linear regression + L1 penalty; can zero out coefficients entirely. | Can automatically discard uninformative features. | `alpha=0.1` | R² = 0.6782, RMSE = 7.649, MAE = 5.837. |
+| 4 | ElasticNet Regression | Blend of L1 + L2 penalties. | Balances Ridge and Lasso's effects. | `alpha=0.1`, `l1_ratio=0.5` | R² = 0.6744, RMSE = 7.694, MAE = 5.904. |
+| 5 | Polynomial Regression | Expands features (e.g. squared, interaction terms) then fits linear regression. | Captures curved relationships. | `degree=2` | **Important implementation note:** applied only to the 5 raw risk-score indicators (not all 79 features), since expanding 79 features to degree 2 would generate an impractically large number of terms (21 terms from 5 inputs). R² = 0.0182, RMSE = 13.361, MAE = 11.879 — lowest of all 10, expected given the restricted feature set, not a modeling failure. |
+| 6 | Decision Tree Regressor | Learns if/else splits, predicts the average value per resulting region. | Interpretable; shows feature importance directly. | `max_depth=15` (tuned further, see Part 10) | R² = 0.9985, RMSE = 0.517, MAE = 0.170. |
+| 7 | Random Forest Regressor | Many decision trees on random subsets, averaged. | Ensemble baseline; became the overall best model. | `n_estimators=150`, `max_depth=15` (tuned further) | R² = 0.9992, RMSE = 0.392, MAE = 0.139 — **rank #1**. |
+| 8 | Gradient Boosting Regressor | Sequential trees, each fit to the residual errors of the previous ones. | Strong ensemble comparison point. | `n_estimators=100`, `max_depth=3` (`sklearn` GBM, not XGBoost) | R² = 0.9939, RMSE = 1.049, MAE = 0.681. |
+| 9 | Support Vector Regressor (SVR) | Fits predictions within an error-tolerance "tube," penalizing points outside it. | Different, margin-based comparison point. | `kernel="rbf"` (features scaled first, as the algorithm list requires) | R² = 0.8854, RMSE = 4.565, MAE = 2.385. **Implementation note (a real bug we found and fixed):** SVR is trained on a smaller stratified subsample of the training split (20,000 rows) for runtime reasons, but is evaluated on the *same shared held-out test split* as the other 9 models. |
+| 10 | K-Nearest Neighbors Regressor | Predicts the average target value of the nearest training points. | Simple, non-parametric baseline. | `n_neighbors=5` (features scaled first) | R² = 0.9877, RMSE = 1.494, MAE = 0.455. |
+
+**Evaluation metrics — all mandatory per the PDF, all present [VERIFIED FACT]:** R², RMSE, MAE for all 10 in one ranked table; 5-fold cross-validated R² for the top 2 (Random Forest: 0.9992 ± 0.0001; Decision Tree: 0.9985 ± 0.0001).
+
+### Classification Part A (Review 1 — the 5 required)
+
+| # | Algorithm | Basic idea [ML CONCEPT] | Why used | Key params | Our result [VERIFIED FACT] |
+|---|---|---|---|---|---|
+| 1 | Logistic Regression | Linear probability boundary between classes (softmax for multiclass). | Baseline; coefficients/odds are interpretable. | `class_weight="balanced"`, `max_iter=1000` | Accuracy 0.9480, F1 weighted 0.9542. |
+| 2 | K-Nearest Neighbors | Majority vote among the k closest training points. | Simple distance-based comparison. | `n_neighbors=5` | Accuracy 0.9802, F1 weighted 0.9798. |
+| 3 | Gaussian Naive Bayes | Assumes features are independent & normally distributed per class. | Very fast, tests the independence assumption directly. | (none tuned) | Accuracy 0.8898, F1 weighted 0.8987. |
+| 4 | Decision Tree Classifier | If/else splits on feature thresholds. | Interpretable; visualizable. | `max_depth=20`, `class_weight="balanced"` | Accuracy 0.9859, F1 weighted 0.9863. |
+| 5 | Support Vector Machine (SVC) | Widest-margin boundary between classes (RBF kernel here). | Strong on complex, non-linear boundaries. | `C`, `gamma` (features scaled first) | Accuracy 0.9433, F1 weighted 0.9451. **Implementation note (same fix as SVR above):** trained on a stratified 20,000-row subsample of the training split for runtime, evaluated on the *same shared test split* as the other 9 classifiers. |
+
+**Preliminary comparison table (Part A, all 5), ranked:** Decision Tree (0.9863) > KNN (0.9798) > Logistic Regression (0.9542) > SVM (0.9451) > Gaussian Naive Bayes (0.8987), by F1 weighted.
+
+### Classification Part B (Review 2 — the remaining 5)
+
+| # | Algorithm | Basic idea [ML CONCEPT] | Why used | Key params | Our result [VERIFIED FACT] |
+|---|---|---|---|---|---|
+| 6 | Random Forest Classifier | Many decision trees on random subsets, majority vote. | Ensemble robustness; also used for feature importance. | `n_estimators=150`, `max_depth=20`, `class_weight="balanced"` (tuned further, see Part 10) | Accuracy 0.9851, F1 weighted 0.9856. |
+| 7 | AdaBoost Classifier | Sequential weak learners, each focusing on the previous ones' mistakes. | Classic boosting comparison. | `n_estimators=100` | Accuracy 0.6210, F1 weighted 0.5857, **F1 macro only 0.449** — by far our weakest model, and its macro score shows it specifically fails on rare classes. |
+| 8 | Gradient Boosting Classifier | Sequential trees fit to residual errors (`sklearn` GBM). | Strong ensemble comparison. | `n_estimators=100`, `max_depth=3` | Accuracy 0.9762, F1 weighted 0.9774. |
+| 9 | Bagging Classifier | Many base estimators (Decision Trees, per the PDF's note) on bootstrap samples, averaged. | Ended up our **overall best model**. | `n_estimators=50` (Decision Tree base estimator, scikit-learn's default) | Accuracy 0.9875, F1 weighted 0.9873 — **rank #1 of all 10**. |
+| 10 | MLP Classifier (Neural Network) | Layers of weighted connections, learned via backpropagation. | Captures complex non-linear patterns. | `hidden_layer_sizes=(100,50)` (tuned further, see Part 10) | Accuracy 0.9832, F1 weighted 0.9800. |
+
+**Full 10-algorithm comparison table (Review 2 requirement), ranked by F1 weighted [VERIFIED FACT]:**
+
+| Rank | Model | Accuracy | Precision (wtd) | Recall (wtd) | F1 (wtd) | F1 (macro) | ROC-AUC (OvR) |
+|---|---|---|---|---|---|---|---|
+| 1 | Bagging | 0.9875 | 0.9872 | 0.9875 | 0.9873 | 0.9101 | 0.9992 |
+| 2 | Decision Tree | 0.9859 | 0.9876 | 0.9859 | 0.9863 | 0.9312 | 0.9956 |
+| 3 | Random Forest | 0.9851 | 0.9875 | 0.9851 | 0.9856 | 0.8924 | 0.9998 |
+| 4 | MLP | 0.9832 | 0.9858 | 0.9832 | 0.9800 | 0.8919 | 0.9997 |
+| 5 | KNN | 0.9802 | 0.9798 | 0.9802 | 0.9798 | 0.8795 | 0.9971 |
+| 6 | Gradient Boosting | 0.9762 | 0.9818 | 0.9762 | 0.9774 | 0.7940 | 0.9877 |
+| 7 | Logistic Regression | 0.9480 | 0.9673 | 0.9480 | 0.9542 | 0.7997 | 0.9975 |
+| 8 | SVM | 0.9433 | 0.9642 | 0.9433 | 0.9451 | 0.7708 | 0.9976 |
+| 9 | Gaussian Naive Bayes | 0.8898 | 0.9254 | 0.8898 | 0.8987 | 0.7398 | 0.9923 |
+| 10 | AdaBoost | 0.6210 | 0.7236 | 0.6210 | 0.5857 | 0.4487 | 0.9453 |
+
+**On ROC-AUC and One-vs-Rest [ML CONCEPT]:** ROC-AUC normally applies to a single yes/no decision. With 15 classes, we use **One-vs-Rest (OvR)**: for each class, treat it as "this class" vs. "everything else," compute that class's ROC-AUC, then average — this is why `utils.evaluate_classifier()` uses `roc_auc_score(..., multi_class="ovr")`.
+
+---
+
+## 4. Dataset Overview
+
+**[VERIFIED FACT]**
 
 | Item | Value |
 |---|---|
-| **Dataset name** | CICIDS2017 (Intrusion Detection Evaluation Dataset, 2017) |
-| **Source** | Canadian Institute for Cybersecurity (CIC), University of New Brunswick — `https://www.unb.ca/cic/datasets/ids-2017.html` (cited in `README.md`) |
-| **Format actually used** | The pre-extracted flow-feature CSVs (`MachineLearningCSV.zip`), generated by a tool called **CICFlowMeter** — *not* raw packet captures (`.pcap` files) |
-| **Raw files merged** | 8 CSV files, one per day/time-segment: `Monday-WorkingHours`, `Tuesday-WorkingHours`, `Wednesday-workingHours`, `Thursday-Morning-WebAttacks`, `Thursday-Afternoon-Infilteration`, `Friday-Morning`, `Friday-Afternoon-PortScan`, `Friday-Afternoon-DDos` |
-| **What one row represents** | One **network flow** — a summarized conversation between two endpoints (e.g., "this connection lasted X seconds, sent Y packets forward and Z backward, had these TCP flags set..."), not a single packet |
-| **What one column represents** | A statistic computed about that flow — e.g., duration, packet counts, byte counts, timing gaps between packets, TCP flag counts — plus one `label` column naming what kind of traffic it was |
-| **Rows before cleaning** | 2,830,743 |
-| **Rows after cleaning** | 2,520,798 |
-| **Columns (raw)** | 79 (78 numeric flow-statistic features + 1 `label` column) |
-| **Columns (after our feature engineering)** | 80 (79 numeric features, including 1 we engineered ourselves, + `label`) |
-| **Numerical vs. categorical columns** | All 78 raw feature columns are numeric (`int64`/`float64`). The **only** non-numeric column is `label` (text). There are no other categorical columns to encode. |
-| **Target column** | `label` |
-| **Number of target classes** | 15 |
-| **What the target means** | The attack category (or `BENIGN` for normal traffic) that this flow was captured as, during the dataset's original creation |
-| **Missing values** | No `NaN`s outright, but 2,867 rows (0.10%) had `Infinity` values (from dividing by a zero flow duration) — converted to `NaN` and dropped |
-| **Duplicate records** | 307,078 exact duplicate rows (10.85%) — removed |
-| **Outliers** | Checked via the IQR rule across all 78 numeric columns; the worst columns flag 20–24% of rows as statistical outliers — **kept, not removed** (see Part 11) |
-| **Class imbalance** | Severe: 190,459.7 : 1 (largest class `BENIGN` vs. smallest class `Heartbleed`) |
-| **Unusual characteristics found** | (1) A duplicate-looking column pair, `fwd_header_length` and `fwd_header_length1`, both present with identical values — a real quirk of the source tool, not our bug. (2) The three "Web Attack" label values display a garbled character (`Web Attack ï¿½ XSS`) where a dash should be — a text-encoding mismatch from how the original files were read, purely cosmetic (doesn't affect modeling, each garbled string is still a single, consistent, unique label). (3) `flow_duration` has a minimum of **-13**, i.e. a negative duration — a known data-quality artifact of CICIDS2017 that we did not attempt to "fix," only noted. |
+| Dataset name | CICIDS2017 (Intrusion Detection Evaluation Dataset, 2017) |
+| Source | Canadian Institute for Cybersecurity, University of New Brunswick — cited in `README.md` with the official dataset URL |
+| Why selected | Per the README, chosen to explore whether flow-level behavioral features can support detection, risk-scoring, and behavioral clustering — a real, published dataset with genuine attacks captured alongside normal traffic |
+| Rows before cleaning | 2,830,743 (merged from 8 raw day-files) |
+| Rows after cleaning | 2,520,798 |
+| Features (raw) | 78 numeric + 1 target (`label`) = 79 columns |
+| Features (after our feature engineering) | 79 numeric + `label` = 80 columns |
+| Target column | `label` |
+| What one row represents | One network flow — a summarized connection, not a single packet |
+| Important columns | `flow_duration`, `flow_bytess`/`flow_packetss` (rates), `total_fwd_packets`/`total_backward_packets`, TCP flag counts, `destination_port` |
+| Numerical vs. categorical | All 78 raw feature columns are numeric; `label` is the only text column; there are **no other categorical columns** to encode |
+| Target classes | 15: `BENIGN`, `Bot`, `DDoS`, `DoS GoldenEye`, `DoS Hulk`, `DoS Slowhttptest`, `DoS slowloris`, `FTP-Patator`, `Heartbleed`, `Infiltration`, `PortScan`, `SSH-Patator`, `Web Attack - Brute Force`, `Web Attack - Sql Injection`, `Web Attack - XSS` |
+| Class imbalance | 190,459.7 : 1 (`BENIGN` = 2,095,057 rows / 83.11%, vs. `Heartbleed` = 11 rows) |
+| Missing values | No raw `NaN`s, but 2,867 rows (0.10%) had `Infinity` (division by a zero flow duration) — converted to `NaN`, dropped |
+| Duplicates | 307,078 exact duplicate rows (10.85%) removed |
+| Outliers | Checked via IQR across all 78 columns; worst columns flag 20–24% of rows; **kept, not removed** (justification in Part 8) |
+| Data-quality issues found | (1) A duplicate-looking column pair, `fwd_header_length`/`fwd_header_length1`, with identical values — a quirk of the source tool. (2) Garbled text (`Web Attack ï¿½ XSS`) in 3 label values from a text-encoding mismatch — cosmetic only, doesn't affect modeling. (3) `flow_duration` has a minimum of **-13** (negative), a known CICIDS2017 data-quality artifact we documented but did not attempt to "fix." |
 
-**Columns that are *not* present** (so we don't accidentally claim otherwise in viva): there is **no** `Source IP`, `Destination IP`, `Source Port`, `Protocol` (TCP/UDP marker), or `Timestamp` column in this cleaned dataset. Only `destination_port` survives as an identifier-like field — kept deliberately as a real behavioral feature rather than dropped (see Part 15).
-
-**Important features** (the ones most discussed in our own EDA and used to build the engineered feature and the risk score): `flow_duration`, `flow_bytess` (bytes/second), `flow_packetss` (packets/second), `total_fwd_packets`, `total_backward_packets`, `fwd_header_length`/`bwd_header_length`, `total_length_of_fwd_packets`/`total_length_of_bwd_packets`, and the TCP flag counts (`syn_flag_count`, `ack_flag_count`, `fin_flag_count`, `rst_flag_count`).
+**Columns confirmed NOT present** (checked directly against the cleaned CSV, so this is not a guess): `Source IP`, `Destination IP`, `Source Port`, a `Protocol` (TCP/UDP) column, and `Timestamp` do not exist in this dataset variant. Only `destination_port` survives as an identifier-like field.
 
 ---
 
-## PART 3 — Cybersecurity Background (only concepts actually relevant here)
+## 5. Cybersecurity Background (only concepts actually present)
 
-**Network traffic / Network flow**
-- *Simple:* All the "conversations" happening on a network, where a flow is one conversation between two computers (e.g., your laptop and a website).
-- *Technical:* A flow is a sequence of packets sharing the same source/destination endpoints and protocol, treated as one logical session for measurement purposes.
-- *Why it matters:* Security tools rarely analyze every raw packet — flow-level summaries are cheaper to compute and still carry strong behavioral signal.
-- *In our project:* Every single row in our dataset **is** one flow (CICFlowMeter already did the packet-to-flow summarization for us).
+**Network traffic / Network flow** — *Simple:* all the "conversations" on a network; a flow is one such conversation. *Technical:* CICFlowMeter groups packets sharing endpoints into one aggregated record. *In our data:* every row **is** one flow.
 
-**Packet**
-- *Simple:* A single small chunk of data sent over a network — many packets make up one flow.
-- *Technical:* The basic unit of network communication; flows are described here through *aggregates* of packets (counts, sizes, timing), not individual packets.
-- *In our project:* We never see individual packets, only columns like `total_fwd_packets` (how many packets went from source to destination) and `total_backward_packets` (how many came back).
+**Packets** — *Simple:* the small chunks of data making up a flow. *In our data:* never seen individually, only as aggregate counts (`total_fwd_packets`, `total_backward_packets`).
 
-**Destination port**
-- *Simple:* A number that tells the receiving computer *which service* the traffic is meant for (e.g., port 80 = a website, port 21 = file transfer, port 22 = secure remote login).
-- *Technical:* A 16-bit number in the transport-layer header identifying the destination application/service.
-- *Why it matters:* Well-known ports map to well-known services, so the port number itself carries information — but relying on it too heavily can teach a model a shortcut ("port 21 = attack") instead of real behavior.
-- *In our project:* `destination_port` is the one identifier-like column we kept. Our own EDA found 11 of 15 classes sit **100%** on a single port (e.g., all DoS/DDoS variants on port 80), which we explicitly flag as a leakage risk (Part 15).
+**Destination port** — *Simple:* the number telling a receiver which service traffic is meant for (80 = web, 21 = file transfer, 22 = secure login). *Technical:* a 16-bit transport-layer field. *In our data:* the one identifier-like column kept; **[TEAM TO CONFIRM]** our own check found 11 of 15 classes sit 100% on one port — a real leakage risk we chose to document rather than silently exploit or silently drop.
 
-**Flow duration, bytes, packets**
-- *Simple:* How long the connection lasted, how much data moved, and how many packets were exchanged.
-- *Technical:* `flow_duration` (microseconds), `flow_bytess`/`flow_packetss` (rates), `total_length_of_fwd/bwd_packets` (payload volume).
-- *Why it matters:* Attacks often have a distinctive "shape" here — e.g., a flood attack is short and has an extremely high packet rate; a slow, low-and-slow attack is the opposite.
+**TCP flags (SYN, ACK, FIN, RST, PSH, URG, CWE, ECE)** — *Simple:* signal bits marking a connection's state. *In our data:* used as raw features, and combined into our custom risk score's "flag anomaly" indicator.
 
-**TCP flags (SYN, ACK, FIN, RST, PSH, URG, CWE, ECE)**
-- *Simple:* Small "signal bits" inside a network connection that mark its state — e.g., "I want to start a connection" (SYN), "connection reset/aborted" (RST).
-- *Technical:* Control bits in the TCP header; their counts per flow (`syn_flag_count`, `ack_flag_count`, etc.) can reveal incomplete/abnormal handshakes.
-- *In our project:* Used directly as features, and specifically combined in our custom risk score's "flag anomaly" indicator (many SYNs without matching ACK/FIN = a half-open-connection pattern often seen in scans/floods).
+**DoS / DDoS** — *Simple:* flooding a target (from one machine, or many at once) so it can't serve real users. *In our data:* `DDoS`, `DoS Hulk`, `DoS GoldenEye`, plus the "low and slow" variants `DoS Slowhttptest`/`DoS slowloris` (holding connections open with minimal data instead of flooding).
 
-**DoS (Denial of Service) / DDoS (Distributed DoS)**
-- *Simple:* Flooding a target with so much traffic (from one machine, or many machines at once for "distributed") that it can't serve real users.
-- *Technical:* An attack aiming to exhaust a target's bandwidth, connections, or processing capacity.
-- *In our project:* Real label classes — `DDoS`, `DoS Hulk`, `DoS GoldenEye`, `DoS Slowhttptest`, `DoS slowloris` (the latter two are "low and slow" variants: instead of flooding, they hold connections open with minimal data to exhaust server resources).
+**Brute force** — *Simple:* trying many credentials until one works. *In our data:* `FTP-Patator`, `SSH-Patator`, `Web Attack - Brute Force`.
 
-**Brute force**
-- *Simple:* Trying many username/password combinations until one works.
-- *Technical:* An automated credential-guessing attack against a login service.
-- *In our project:* `FTP-Patator` (brute-forcing FTP file-transfer logins) and `SSH-Patator` (brute-forcing SSH remote-login), plus a `Web Attack - Brute Force` class.
+**Botnet** — *Simple:* a network of compromised machines controlled remotely. *In our data:* the `Bot` class; **[TEAM TO CONFIRM]** our scatter-plot analysis found Bot traffic forms a visually distinct cluster on a duration-vs-packet-rate plot, consistent with regular C2 "beacon" behavior.
 
-**Botnet**
-- *Simple:* A network of compromised computers ("bots") controlled remotely by an attacker to act together, often without their owners knowing.
-- *Technical:* Malware-infected hosts communicating with a command-and-control (C2) server.
-- *In our project:* The `Bot` label class. Our own scatter-plot analysis (Part 6) found Bot traffic forms a visually distinct cluster on a duration-vs-packet-rate plot — consistent with the regular, repeatable "beacon" pattern bots use to check in with a C2 server.
+**Port scanning** — *Simple:* probing many ports to find open services. *In our data:* the `PortScan` class — and notably, the *only* class our leakage check found spread across many ports (0.4% concentration) rather than one, which is exactly what scanning should look like.
 
-**Port scanning**
-- *Simple:* Systematically probing many ports on a target to find out what services are running (often reconnaissance before a real attack).
-- *Technical:* Sending connection attempts across a range of destination ports.
-- *In our project:* The `PortScan` label class. Our destination-port leakage check found PortScan is the *only* class that is **not** concentrated on one port (just 0.4%) — exactly what you'd expect, since scanning by definition touches many ports, which is good evidence our leakage check is measuring something real.
+**Web attacks (Brute Force, XSS, SQL Injection)** — attacks against a website itself. *In our data:* three separate, very rare classes.
 
-**Web attacks (Brute Force, XSS, SQL Injection)**
-- *Simple:* Attacks against a website itself — guessing login credentials, injecting malicious scripts (XSS = Cross-Site Scripting), or injecting malicious database commands (SQL Injection).
-- *In our project:* Three separate label classes, all very rare (1,470 / 652 / 21 rows respectively).
+**Infiltration** — *Simple:* an attacker already inside the network. *In our data:* a class with only 36 rows.
 
-**Infiltration**
-- *Simple:* An attacker who has already gotten a foothold inside the network and is moving around / exfiltrating data.
-- *In our project:* A label class, and one of the rarest (36 rows).
+**Heartbleed** — *Simple:* a specific 2014 bug (CVE-2014-0160) in OpenSSL that let attackers read server memory. *In our data:* the rarest class (11 rows).
 
-**Heartbleed**
-- *Simple:* A specific, famous security bug (from 2014) in a widely-used encryption library (OpenSSL) that let attackers read small chunks of a server's private memory.
-- *Technical:* A buffer over-read vulnerability (CVE-2014-0160) in the TLS heartbeat extension.
-- *In our project:* A label class with only 11 rows — the rarest class in the entire dataset, which is exactly why it's the hardest one for our classifiers to detect reliably.
-
-*Concepts intentionally **not** covered here because they aren't present in this dataset: Source/Destination IP, Protocol (TCP vs UDP marker), and packet-capture-level analysis — none of these exist as columns in this cleaned data (verified in Part 2).*
+*Not covered: Source/Destination IP and a distinct Protocol/TCP-UDP marker are not present as columns in this dataset (verified in Part 4), so they're not discussed as project-specific concepts.*
 
 ---
 
-## PART 4 — Overall Project Pipeline
+## 6. Complete Project Pipeline
 
 ```
-Raw CICIDS2017 CSVs (data/raw/, 8 files)
-        ↓  Data Loading            — merge all 8 files, standardize inconsistent column names
-        ↓  Data Audit              — shape, dtypes, missing values, class distribution shown
-        ↓  EDA                     — distributions, correlation heatmap, scatter plots
-        ↓  Data Cleaning           — Infinity → NaN → drop; drop exact duplicates
-        ↓  Feature Engineering     — add header_payload_ratio
-        ↓  (Encoding)              — label-encode the target (no categorical features to encode)
-        ↓  (Scaling)               — StandardScaler, fit on train split only
-        ↓  Train/Test Split        — 80:20, stratified, random_state=42, same split reused per track
-        ↓                          ↓                          ↓
-   Regression Models         Classification Models      Clustering (unsupervised,
-   (10 algorithms)           (10 algorithms)              labels withheld)
-        ↓                          ↓                          ↓
-   Regression Evaluation     Classification Evaluation   Cluster evaluation
-   (R², RMSE, MAE table)     (Accuracy, F1, confusion     (Silhouette, Davies-Bouldin,
-        ↓                     matrix table)                Calinski-Harabasz)
-   Hyperparameter Tuning     Hyperparameter Tuning              ↓
-   (top 2 models)            (top 3 models) + SMOTE       Cluster interpretation
-        ↓                          ↓                       (labels used only now)
-        └──────────────┬───────────┘
-                        ↓
-                Final Findings & Summary
-                (per-notebook conclusion sections)
+Raw CICIDS2017 CSVs (8 files, data/raw/)
+  ↓ Data loading      merge all 8 files into one table
+  ↓ Data audit        shape, dtypes, missing-value counts, class distribution
+  ↓ EDA               distributions, correlation heatmap, scatter plots, target plot
+  ↓ Cleaning          Infinity → NaN → drop; drop exact duplicates
+  ↓ Feature eng.       add header_payload_ratio
+  ↓ Encoding          label-encode the target (no categorical features exist)
+  ↓ Scaling           StandardScaler, fit on train split only
+  ↓ Train/test split  80:20, stratified, random_state=42, one split per track
+  ↓
+  ├─ Regression (10 algorithms) → R²/RMSE/MAE table → tuning (top 2) → residual/actual-vs-predicted/importance plots
+  ├─ Classification (10 algorithms) → Accuracy/Precision/Recall/F1/ROC-AUC table → tuning (top 3) + SMOTE → confusion matrices
+  └─ Clustering (2 algorithms, labels withheld) → Silhouette/DB/CH → PCA & t-SNE plots → labels used only now, to interpret
+  ↓
+Final results & written conclusions (per notebook)
 ```
 
-**Why each stage exists, briefly:**
-- **Data loading/merging** — the raw data is split across 8 files; we need one consistent table before anything else can happen.
-- **Audit** — you can't trust a model built on data you haven't looked at; this catches shape/type surprises early.
-- **EDA** — reveals the class imbalance, skewed features, and correlated columns that shape every later decision (why we use `class_weight`, why we prune correlated features before clustering, etc.).
-- **Cleaning** — removes genuinely invalid values (Infinity) and redundant rows (duplicates) *before* they can bias a model.
-- **Feature engineering** — adds one new signal (`header_payload_ratio`) not directly present in the raw columns.
-- **Scaling (train-only fit)** — prevents "leaking" information about the test set into how features are standardized (see Part 11).
-- **Train/test split (stratified, one split per track)** — makes every model's score comparable to every other model's score, fairly.
-- **Model training** — the actual learning step, once per algorithm.
-- **Evaluation** — turns raw predictions into comparable numbers (R²/RMSE/MAE or Accuracy/F1/confusion matrix).
-- **Tuning** — searches for better hyperparameter settings than the defaults, always checked back against the same untouched test data.
-- **Clustering** — a separate, unsupervised pass that never sees labels until the very end, purely to check whether the discovered groups line up with anything meaningful.
-- **Final findings** — honest summary of what worked, what didn't, and what's left to improve.
+For what happens/why/output at each stage, see Part 6 of the pipeline table in Section 1 above and the notebook-by-notebook breakdown in Part 7 below — repeating it a third time would be redundant.
 
 ---
 
-## PART 5 — Notebook-by-Notebook Explanation
+## 7. Notebook Overview
 
-All four expected notebooks **exist and run successfully end-to-end**, verified this session via a clean-kernel execution of each (zero errors across all cells):
+All four notebooks exist and, as of this session, **execute top-to-bottom from a clean kernel with zero errors** (verified by parsing every cell's output for error-type results, not just assumed from the code existing).
 
-| Notebook | Exists? |
-|---|---|
-| `01_EDA.ipynb` | Yes |
-| `02_Classification.ipynb` | Yes |
-| `03_Regression.ipynb` | Yes |
-| `04_Clustering.ipynb` | Yes |
+| Notebook | Purpose | Input | Models | Metrics | Output |
+|---|---|---|---|---|---|
+| `01_EDA.ipynb` | Load, audit, clean, explore, enrich the raw data once | 8 raw CSVs | None (no modeling) | N/A | `data/processed/cleaned_dataset.csv` |
+| `02_Classification.ipynb` | Predict attack type | cleaned CSV | 10 classifiers (Part A + Part B) | Accuracy, Precision/Recall (wtd), F1 (wtd+macro), ROC-AUC (OvR), confusion matrix | Saved model + scaler + encoder in `models/classification/` |
+| `03_Regression.ipynb` | Predict 0–100 risk score | cleaned CSV | 10 regressors | R², RMSE, MAE | Saved model + risk-score calculator + scaler in `models/regression/` |
+| `04_Clustering.ipynb` | Discover behavioral groups, unsupervised | cleaned CSV | K-Means, Agglomerative | Silhouette, Davies-Bouldin, Calinski-Harabasz | Saved K-Means model + PCA transformer + cluster profile in `models/clustering/` |
 
-### `01_EDA.ipynb`
-- **Purpose:** Load, audit, clean, explore, and enrich the raw data once, so the other three notebooks share one consistent, already-cleaned dataset.
-- **Input:** The 8 raw CSVs in `data/raw/`.
-- **Main steps:** merge → standardize column names → shape/dtype audit → clean (Infinity/duplicates) → check outliers → engineer `header_payload_ratio` → save `data/processed/cleaned_dataset.csv` → explore (target distribution, feature distributions, scatter plots, correlation) → destination-port leakage check → written observations.
-- **Algorithms/models:** None (this is a preprocessing/exploration notebook, not a modeling one).
-- **Important preprocessing:** the cleaning and feature-engineering steps that every other notebook depends on.
-- **Important visualizations:** target class bar chart (linear + log scale), 5-key-feature histograms, a 79-panel grid covering *every* numeric feature, a full correlation heatmap, 2 scatter plots.
-- **Evaluation metrics:** not applicable (no model here).
-- **Output:** `data/processed/cleaned_dataset.csv` (2,520,798 rows × 80 columns).
-- **Why this notebook exists:** so cleaning logic lives in exactly one place instead of being repeated (and risking being done differently) in three separate notebooks.
-
-### `02_Classification.ipynb`
-- **Purpose:** Predict which of the 15 `label` categories a network flow belongs to.
-- **Input:** `data/processed/cleaned_dataset.csv`.
-- **Main steps:** load → take a stratified working sample → encode target → 80:20 stratified split → scale (train-only fit) → train 10 classifiers → compare → 5-fold CV on top 2 → tune top 3 (Random Forest, SVM, MLP) → SMOTE comparison on the strongest tuned model → pick the overall best → explainability (feature importance, SHAP attempt) → save model artifacts for the app.
-- **Algorithms/models:** Logistic Regression, KNN, Gaussian Naive Bayes, Decision Tree, SVM, Random Forest, AdaBoost, Gradient Boosting, Bagging, MLP (10 total).
-- **Important preprocessing:** `class_weight="balanced"`, stratified sampling, SMOTE — all aimed at the severe class imbalance found in `01_EDA.ipynb`.
-- **Important visualizations:** a grid of all 10 confusion matrices, a detailed confusion matrix + ROC curves for the best model, a feature-importance bar chart.
-- **Evaluation metrics:** Accuracy, Precision/Recall (weighted), F1 (weighted and macro), ROC-AUC (one-vs-rest).
-- **Output:** the trained best model + scaler + label encoder + feature list, saved to `models/classification/`.
-- **Why this notebook exists:** to answer "what type of attack is this?" for a new, unseen flow.
-
-### `03_Regression.ipynb`
-- **Purpose:** Predict a continuous 0–100 **behavior-based risk score** for a flow — *not* a label lookup.
-- **Input:** `data/processed/cleaned_dataset.csv`.
-- **Main steps:** load → stratified sample → split *before* scoring → fit the custom risk-score calculator on training data only → generate the risk score target → scale features (train-only fit) → train 10 regressors → compare → 5-fold CV on top 2 → tune top 2 (Random Forest, Decision Tree) → visualize the best model → save artifacts.
-- **Algorithms/models:** Linear Regression, Ridge, Lasso, ElasticNet, Polynomial Regression, Decision Tree Regressor, Random Forest Regressor, Gradient Boosting Regressor, SVR, KNN Regression (10 total).
-- **Important preprocessing:** the risk score itself is "fit" like a scaler — its percentile boundaries come from training data only, applied to test data, to avoid leaking test information into the target's own definition.
-- **Important visualizations:** actual-vs-predicted scatter plot, residual plots, tree-based feature-importance chart.
-- **Evaluation metrics:** R² (R-squared), RMSE (Root Mean Squared Error), MAE (Mean Absolute Error).
-- **Output:** the trained best model + the fitted risk-score calculator + scaler, saved to `models/regression/`.
-- **Why this notebook exists:** accuracy/F1 don't make sense for "how risky is this traffic" — a continuous score needs regression, and this notebook shows the score can actually be predicted from the same flow features that produced it.
-
-### `04_Clustering.ipynb`
-- **Purpose:** Discover whether the flows naturally group into behavioral clusters, without using any labels during the grouping itself.
-- **Input:** `data/processed/cleaned_dataset.csv`.
-- **Main steps:** load a clustering-sized sample → drop highly-correlated features → scale (train-fit reused) → reduce dimensions with PCA → find optimal k for K-Means (elbow + silhouette) → run Agglomerative clustering with a safeguard against degenerate splits → compute cluster-quality metrics → visualize in 2D (PCA and t-SNE) → *only now* bring back the real labels to interpret what each cluster represents.
-- **Algorithms/models:** K-Means, Agglomerative (Hierarchical) Clustering.
-- **Important preprocessing:** correlation-based feature pruning (33 features dropped) specifically because correlated features distort distance-based clustering more than they distort trees/regularized models.
-- **Important visualizations:** PCA-variance-explained curve, elbow curve, silhouette-vs-k curve, dendrogram, 2D PCA cluster plots, 2D t-SNE cluster plot.
-- **Evaluation metrics:** Silhouette score, Davies-Bouldin index, Calinski-Harabasz index (no accuracy/F1 — there are no training labels to be "right" or "wrong" against).
-- **Output:** the fitted K-Means model, scaler, PCA transformer, and a cluster-to-label profile table, saved to `models/clustering/`.
-- **Why this notebook exists:** to check for attack *behaviors* the dataset's 15 fixed labels might not fully capture, and as a sanity check that unlabeled traffic still separates sensibly.
+*Why `01_EDA.ipynb` exists as a 4th notebook, given the PDF's structure lists only 3 tracks:* EDA/cleaning/feature-engineering is graded (Section A/B of Review 1) but isn't itself one of the three modeling **tracks** — it's shared groundwork feeding all three. The PDF's guideline 7.1 explicitly allows "one notebook per track... **or** a single notebook with clearly labelled sections," and the example filenames given (`regression.ipynb`, `classification.ipynb`, `clustering.ipynb`) are introduced with "e.g." — read as illustrative, not a literal mandatory filename list. **[TEAM TO CONFIRM WITH INSTRUCTOR]** this structure (one shared EDA/preprocessing notebook + one notebook per track) is a reasonable reading of that rule, but it's worth explicitly confirming acceptable with the instructor before Review 1, since it's a structural choice, not something the PDF spells out in this exact shape.
 
 ---
 
-## PART 6 — `01_EDA.ipynb` in Detail
+## 8. EDA + Preprocessing (detail)
 
-1. **Dataset loading** — `load_and_merge_csvs()` reads all 8 raw CSVs and concatenates them; a report prints exactly how many rows came from each file (totaling 2,830,743).
-2. **Initial inspection / shape / data types** — `df.shape` and `df.info()` show 2,830,743 rows × 79 columns, 78 numeric + 1 text (`label`).
-3. **Missing-value analysis** — 2,867 rows (0.10%) had `Infinity` values; converted to `NaN` and dropped.
-4. **Duplicate analysis** — 307,078 exact duplicate rows (10.85%) found and removed.
-5. **Target distribution** — a table and bar chart of all 15 classes; **observed:** `BENIGN` is 83.11% of the data, and the three rarest classes together (`Infiltration`, `Web Attack - Sql Injection`, `Heartbleed`) total only 68 rows.
-6. **Outlier analysis** — IQR check across all 78 numeric columns. **Observed:** the worst columns (`fwd_iat_std`, `bwd_packetss`, several `active_*`/`idle_*` columns, `destination_port`) flag 20–24% of rows; for the `active_*`/`idle_*` columns this is because most flows have *zero* active/idle cycling, so the IQR "normal range" collapses to `[0, 0]` and any nonzero value counts as an outlier — not a data problem, a real behavioral signal.
-7. **Feature distributions** — a 5-panel `log1p`-scaled view of key features (all heavily right-skewed: most flows are short and small, a few are very large/long) plus a 79-panel raw-scale grid covering every single numeric feature, so nothing hides.
-8. **Correlation analysis** — a full 78×78 heatmap plus a table of the 71 pairs exceeding |r| = 0.9. **Observed:** almost all of the strongest pairs (r = 1.000) are the same underlying quantity measured twice by the source tool (e.g., `total_fwd_packets` vs. `subflow_fwd_packets`), not a coincidence.
-9. **Scatter plots** — two plots, both colored by attack label, using a small stratified sample so rare classes stay visible:
-   - *Flow duration vs. packet rate:* most traffic (BENIGN and most attacks) sits along one shared downward diagonal band — **except `Bot`**, which forms its own visually separate, tight cluster, consistent with a botnet's repeated, regular "check-in" behavior.
-   - *Byte rate vs. our engineered `header_payload_ratio`:* almost all flows sit near ratio ≈ 0, and the handful of extreme outliers are exactly the near-zero-payload flows — the single most extreme point in the sample is a `DoS Slowhttptest` flow, matching that attack's known "hold the connection open with almost no data" behavior.
-10. **Feature engineering** — `header_payload_ratio` added here (see Part 10 for full detail).
-11. **Correlation-driven decision** — the 71 correlated pairs found here directly justify dropping 33 features before clustering (correlated features distort distance calculations).
-12. **Important observations** — a full written section at the end of the notebook, covering dataset size, imbalance, cleaning impact, correlated features, feature distributions, outliers, feature engineering, and the destination-port leakage finding, each grounded in the numbers above.
-
----
-
-## PART 7 — `02_Classification.ipynb` in Detail
-
-**The classification problem:** given a flow's features, predict which of the 15 `label` categories it belongs to. The **target** is `label`; the classes are the attack types listed in Part 2. **Data split:** 80:20, stratified (so every class keeps its proportion in both splits), `random_state=42`, on a 150,000-row stratified working sample of the full 2.52M rows (working sample actually lands at 73,901 rows in practice — most classes are smaller than the 10,000-per-class cap the sampling function computes, so they all come through in full rather than being capped).
-
-**Encoding:** only the target needs it (`LabelEncoder` — there are no categorical input features). **Scaling:** `StandardScaler`, fit on the training split only.
-
-**Algorithms used, and why, in simple terms:**
-
-| Algorithm | Basic idea |
-|---|---|
-| Logistic Regression | Draws a (linear) decision boundary between classes using probabilities; fast, easy to explain baseline. |
-| K-Nearest Neighbors (KNN) | Looks at the closest training examples to a new point and takes a majority vote of their labels. |
-| Gaussian Naive Bayes | Assumes each feature is roughly bell-curve-shaped and independent of the others; very fast, often a weak baseline. |
-| Decision Tree | Learns a series of "if this feature is above/below X" questions to split classes apart. |
-| SVM (Support Vector Machine) | Finds the boundary that keeps the widest possible margin between classes (using a curved, "RBF" boundary here). |
-| Random Forest | Trains many different decision trees on random subsets of data/features and lets them vote — reduces overfitting of a single tree. |
-| AdaBoost | Trains a sequence of simple models, each one focusing extra attention on the mistakes of the previous one. |
-| Gradient Boosting | Similar idea to AdaBoost, but each new model directly targets the *remaining error* of the previous ones. |
-| Bagging | Trains many copies of a base model on random, overlapping subsets of the data and averages their predictions. |
-| MLP (a small neural network) | A network of connected "neurons" in layers, learning non-linear patterns through many small weighted adjustments. |
-
-**Predictions & results (real, from the last verified run):**
-
-| Rank | Model | Accuracy | F1 (weighted) | F1 (macro) |
-|---|---|---|---|---|
-| 1 | Bagging | 0.9875 | 0.9873 | 0.910 |
-| 2 | Decision Tree | 0.9859 | 0.9863 | 0.931 |
-| 3 | Random Forest | 0.9851 | 0.9856 | 0.892 |
-| 4 | MLP | 0.9832 | 0.9800 | 0.892 |
-| 5 | KNN | 0.9802 | 0.9798 | 0.879 |
-| 6 | Gradient Boosting | 0.9762 | 0.9774 | 0.794 |
-| 7 | Logistic Regression | 0.9480 | 0.9542 | 0.800 |
-| 8 | SVM | 0.9433 | 0.9451 | 0.771 |
-| 9 | Gaussian Naive Bayes | 0.8898 | 0.8987 | 0.740 |
-| 10 | AdaBoost | 0.6210 | 0.5857 | 0.449 |
-
-**What these actual results tell us** (not "best model" claims beyond what the numbers show): **Bagging measured the highest weighted F1** in our comparison table and was confirmed as the overall winner even after comparing it against 3 tuned models and 1 SMOTE variant. **AdaBoost measured by far the weakest results**, and its low *macro* F1 (0.449, versus a respectable 0.586 weighted F1) tells us specifically that it struggles on the rare classes — weighted F1 alone would have hidden that.
-
-**Confusion matrix:** a table showing, for each true class, how the model's predictions were distributed across all classes — the diagonal is correct predictions, everything off-diagonal is a specific kind of mistake (e.g., "how often did the model confuse `DoS Hulk` with `DoS GoldenEye`?"). We generated this for all 10 models (as a compact grid) plus a fully-labeled one for the best model.
+**[VERIFIED FACT]** — `01_EDA.ipynb`, in order:
+- **Shape/dtypes:** `df.shape` and `df.info()` → 2,830,743 × 79; 78 numeric, 1 text.
+- **Missing values:** `clean_data()` reports 2,867 rows (0.10%) with Infinity, converted to NaN, dropped.
+- **Duplicates:** 307,078 rows (10.85%) removed.
+- **Class/target distribution:** a table + bar chart (linear and log scale) of all 15 classes.
+- **Feature distributions:** a 5-panel `log1p` view of key features, plus a 79-panel raw-scale grid covering *every* numeric feature (satisfying the PDF's "distribution plots for each feature").
+- **Correlation heatmap:** full 78×78 heatmap + a table of the 71 pairs with |r| ≥ 0.9.
+- **Target plot:** the class-distribution bar chart above.
+- **Scatter plots (≥2, feature-target relationships, per the PDF):** duration-vs-packet-rate and byte-rate-vs-engineered-ratio, both colored by `label`.
+- **Written observations:** a Markdown cell after every major plot, grounded in the real numbers above (not generic text) — satisfying the "insight commentary" requirement.
+- **Outliers:** IQR check across all 78 numeric columns, 20–24% flagged on the worst columns, kept (not removed) with a written justification.
+- **Encoding:** only the target (`LabelEncoder`) — no categorical input features exist.
+- **Scaling:** `StandardScaler`, fit on the training split only, in every track's notebook.
+- **Train/test split:** 80:20, `random_state=42`, `stratify=True` — same split reused by every model within a track.
+- **Stratification:** confirmed via `train_test_split(..., stratify=...)` in `src/preprocessing.py`'s `split_data()`.
+- **Data leakage — how it's avoided:** the scaler and the custom risk score's percentile boundaries are both fit on the training split only, never on the full dataset before splitting.
 
 ---
 
-## PART 8 — `03_Regression.ipynb` in Detail
+## 9. Feature Engineering
 
-**What's being predicted:** a **custom-built 0–100 cybersecurity risk score** — *not* looked up from the label (there's no `BENIGN=0, DDoS=100` table). It's computed by `src/risk_score.py` from 5 **behavioral indicators** derived from the raw flow columns:
+**[VERIFIED FACT]** — exactly one engineered feature exists in the project:
 
-| Indicator | Derived from | Simple meaning |
-|---|---|---|
-| Packet rate | `flow_packetss` | How many packets per second |
-| Byte rate | `flow_bytess` | How many bytes per second |
-| Flag anomaly | SYN/ACK/FIN/RST flag counts | How "unusual" the TCP handshake pattern looks (e.g., lots of SYNs without matching ACKs/FINs) |
-| Duration extremity | `flow_duration` | How far this flow's duration is from a "typical" flow's duration |
-| Traffic asymmetry | forward vs. backward packet counts | How lopsided the conversation is (e.g., almost all one-directional) |
+- **Name:** `header_payload_ratio`
+- **Original columns used:** `fwd_header_length`, `bwd_header_length` (header bytes); `total_length_of_fwd_packets`, `total_length_of_bwd_packets` (payload bytes)
+- **Formula:** `(fwd_header_length + bwd_header_length) / (total_length_of_fwd_packets + total_length_of_bwd_packets + 1)`
+- **Meaning:** how much of a flow's bytes are protocol overhead vs. actual data.
+- **Why created:** none of the 78 raw columns expresses this relationship directly.
+- **Potential benefit:** legitimate bulk-data flows have large payloads relative to fixed header overhead (small ratio); probing/incomplete-connection traffic is mostly header (large ratio) — a cheap, interpretable, pre-computed signal instead of forcing a model to learn the division implicitly.
+- **[TEAM TO CONFIRM] Actual evidence from our project:** in a 6,000-row stratified scatter sample, the single most extreme value of this ratio belongs to a real `DoS Slowhttptest` flow — an attack that specifically works by sending almost no payload while holding a connection open. This is a genuine pattern found in the data, not an assumed one, but the team should look at the actual scatter plot (`reports/figures/scatter_byterate_vs_headerratio.png`) themselves before presenting this as their own finding in viva.
 
-Each indicator is turned into a 0–1 score by **percentile rank against the training data only** (fit on train, applied to test — the same no-leakage discipline as a scaler), then combined with fixed weights (packet rate 25%, byte rate 20%, flag anomaly 25%, duration extremity 15%, traffic asymmetry 15%) into the final 0–100 score. A sanity check afterward (never fed back into the formula) confirmed BENIGN traffic trends toward lower scores than attack traffic, as expected.
+No second engineered feature currently exists — do not claim otherwise in viva.
 
-**Why regression here:** "how risky is this?" is naturally a continuous question, not a fixed category — regression is the right tool for predicting a number on a scale, and it lets us build a *designed*, explainable score rather than depending purely on the attack label.
+---
 
-**Input features:** the same 78 (now 79, with our engineered feature) flow columns used for classification. **Target:** the risk score above. **Split:** 80:20, stratified, `random_state=42` — done *before* the risk score is even generated, so the score's own training statistics never see the test rows.
+## 10. Regression Track — Review 1 (full detail)
 
-**All 10 regression algorithms, basic idea, and why usable here:**
+**Target:** a custom 0–100 **behavior-based risk score**, computed by `src/risk_score.py`, from 5 indicators (packet rate, byte rate, TCP-flag anomaly, duration extremity, forward/backward traffic asymmetry), each percentile-normalized **on training data only**, combined with fixed weights (25/20/25/15/15%). **Not** a `BENIGN=0, DDoS=100` lookup table.
 
-| Algorithm | Basic idea | Why it can work here |
-|---|---|---|
-| Linear Regression | Fits a single straight-line (hyperplane) relationship. | Simple baseline for comparison. |
-| Ridge | Linear regression that shrinks coefficients to avoid overfitting. | Handles the many correlated features gently. |
-| Lasso | Like Ridge, but can shrink some coefficients to exactly zero. | Can automatically ignore useless features. |
-| ElasticNet | A blend of Ridge and Lasso. | Balances both effects. |
-| Polynomial Regression | Linear regression on top of expanded (squared/interaction) features. | Captures curved relationships — here restricted to just the 5 risk indicators, since expanding all 78 features would be far too many terms. |
-| Decision Tree Regressor | Splits data into regions and predicts the average value per region. | Can capture the score's threshold-like structure directly. |
-| Random Forest Regressor | Many decision trees averaged together. | Reduces a single tree's overfitting; ended up the top performer. |
-| Gradient Boosting Regressor | Trees trained sequentially on the previous trees' errors. | Strong at capturing complex patterns. |
-| SVR (Support Vector Regression) | Tries to fit predictions within a margin ("tube") around the true values. | A different, margin-based approach as a comparison point. |
-| KNN Regression | Predicts the average target of the nearest training points. | Simple, instance-based comparison. |
+**Why regression:** "how risky is this?" is naturally a continuous question; regression lets us build a designed, explainable score rather than only depending on the fixed attack label.
 
-**Comparison table (real, from the last verified run), ranked by R²:**
+**Preprocessing:** same cleaned dataset as every other track; split happens *before* the risk score is generated, so the score's own training statistics never see test rows; `StandardScaler` fit on train only.
+
+**Train/test split:** 80:20, stratified, `random_state=42` — **the same preprocessed dataset and same held-out test set for all 10 models**, per the PDF's explicit requirement — with the one documented exception that SVR trains on a smaller *training-only* subsample for speed while still being *evaluated* on the identical shared test set as the other 9.
+
+**Model training & predictions:** all 10 models are `.fit()` and `.predict()` in `03_Regression.ipynb`, with per-model timing printed, zero execution errors (verified this session via a clean-kernel run).
+
+**Comparison table, ranked by R² [VERIFIED FACT]:**
 
 | Rank | Model | R² | RMSE | MAE |
 |---|---|---|---|---|
@@ -345,353 +278,329 @@ Each indicator is turned into a 0–1 score by **percentile rank against the tra
 | 9 | Ridge | 0.5518 | 9.027 | 4.525 |
 | 10 | Polynomial Regression | 0.0182 | 13.361 | 11.879 |
 
-*(Polynomial Regression scores lowest — not because it's a "bad" algorithm, but because by design it only sees 5 features, not all 78, so it's not a fully fair comparison to the other 9.)*
+**5-fold cross-validated R² for the two best-performing models (mandatory):** Random Forest 0.9992 ± 0.0001; Decision Tree 0.9985 ± 0.0001.
 
-**Cross-validation:** 5-fold CV was run on the top 2 models (Random Forest, Decision Tree) to make sure their strong scores weren't just a lucky single split — both stayed consistently high across folds (R² = 0.9992 ± 0.0001 and 0.9985 ± 0.0001).
+**Hyperparameter tuning (`RandomizedSearchCV`, cv=3, on the top 2):**
 
-**Hyperparameter tuning (RandomizedSearchCV, top 2 models):**
+| Model | Best params found | R² before→after | RMSE before→after | MAE before→after |
+|---|---|---|---|---|
+| Random Forest | `n_estimators=150, min_samples_split=2, max_features='sqrt', max_depth=None` | 0.9992 → **0.9993** | 0.392 → **0.348** | 0.139 → **0.133** |
+| Decision Tree | `min_samples_split=5, min_samples_leaf=2, max_depth=30` | 0.9985 → 0.9985 (flat) | 0.517 → 0.521 (slightly worse) | 0.170 → **0.142** (better) |
 
-| Model | Before → After R² | Before → After RMSE | Before → After MAE |
-|---|---|---|---|
-| Random Forest | 0.9992 → **0.9993** | 0.392 → **0.348** | 0.139 → **0.133** |
-| Decision Tree | 0.9985 → 0.9985 (flat) | 0.517 → 0.521 (slightly worse) | 0.170 → **0.142** (better) |
+**[TEAM TO CONFIRM]** we report Decision Tree's mixed result honestly (not every metric improves after tuning every time) rather than only showing favorable numbers.
 
-We reported this honestly rather than only showing improvements — Decision Tree's result is a genuine mixed outcome, not every metric improves after tuning every time.
-
-**Visualizations for the best model (Random Forest):** an actual-vs-predicted scatter plot (points should sit close to a diagonal line if predictions are good), a residual plot (errors should scatter randomly around zero, not show a pattern), and a feature-importance bar chart (which raw columns the tree relies on most).
+**Visualizations (mandatory, for the best model, Random Forest):** actual-vs-predicted scatter plot, residual plots (residuals-vs-predicted + residual histogram), and a tree-based feature-importance bar chart — all titled, axis-labelled, `tight_layout`-formatted.
 
 ---
 
-## PART 9 — `04_Clustering.ipynb` in Detail
+## 11. Classification — Review 1, Part A (full detail)
 
-**Why clustering is used here:** classification and regression both need labels to learn from. Clustering doesn't — it asks "if we ignore the labels entirely, does the traffic naturally fall into groups based on behavior alone?" This is useful for catching patterns the fixed 15-label scheme might not fully capture, and as an independent check that the feature space is behaviorally meaningful.
+Covered algorithm-by-algorithm with real results in Part 3 above. Summary:
 
-**What clustering means, simply:** grouping similar data points together based on how close they are to each other in feature space, with no "correct answer" given in advance.
-
-**Input features:** the same cleaned/engineered flow features, minus 33 dropped for being highly correlated (>0.9) with another feature — correlated features distort *distance*-based methods like these two algorithms more than they distort trees or regularized regression.
-
-**Preprocessing specific to this notebook:** `StandardScaler` (fit once, reused consistently across the two different sample sizes used below) and PCA dimensionality reduction to 22 components (retaining 95% of the variance) — done because in very high-dimensional spaces, distances between points become less meaningful (the "curse of dimensionality").
-
-**Algorithms used:**
-- **K-Means** — picks k "center" points and assigns every flow to its nearest center, repeating until stable. Run on a 28,132-row stratified sample.
-- **Agglomerative (Hierarchical) Clustering** — starts with every point as its own cluster and repeatedly merges the closest pair, building a tree of merges. Run on a smaller 4,064-row sample (it needs to compare every point to every other point, which gets very memory-expensive at larger sizes).
-
-**Number of clusters:** k = **10** for both, chosen for K-Means via the silhouette score (tried k = 2 through 10).
-
-**A specific, real finding worth mentioning in viva:** when comparing linkage methods for Agglomerative clustering, "average" linkage scored a *higher* raw silhouette (0.69) than "ward" linkage (0.45) — but it was **rejected** because it crammed 99.1% of all points into a single cluster (a "degenerate," useless split). "Ward" linkage, with a more balanced 46.2%-largest-cluster split, was chosen instead. This shows silhouette score alone can be misleading.
-
-**Evaluation metrics used** (no accuracy/F1 — there's no "correct" cluster to score against):
-- **Silhouette score:** K-Means = 0.426, Agglomerative (ward) = 0.453 — higher is better, and these two aren't directly comparable to each other since they ran on different sample sizes.
-- **Davies-Bouldin index:** K-Means = 0.899, Agglomerative = 1.021 — lower is better.
-- **Calinski-Harabasz index:** K-Means = 3709.8, Agglomerative = 1090.6 — higher is better.
-
-**Visualizations:** a PCA-variance-explained curve, an elbow curve and a silhouette-vs-k curve (both for choosing k), a dendrogram, and 2D scatter plots (PCA for both algorithms, plus t-SNE as an extra view for Agglomerative).
-
-**How clusters were interpreted (labels brought back only at the very end):** some clusters turned out highly "pure" with respect to real attack types even though labels were never used to build them — e.g., one cluster is 98.9% `DoS GoldenEye`, another is 98.8% `DoS Slowhttptest`, another is 90.9% `Heartbleed`. But the largest cluster (15,240 points) is a mixed bag dominated by `PortScan` at only 17.1% — meaning several traffic types genuinely overlap in behavior rather than separating cleanly. **We did not force a 1-to-1 mapping between clusters and the 15 labels** — that would be inventing an interpretation the data doesn't support.
+- **Problem:** predict which of 15 `label` categories a flow belongs to.
+- **Target:** `label`, label-encoded to integers 0–14.
+- **Preprocessing:** stratified 150,000-row working sample (73,901 rows in practice, since most classes are smaller than the per-class cap); 80:20 stratified split; `StandardScaler` fit on train only.
+- **Split:** same shared split used by all 5 Part-A algorithms (and, after our fix, by SVM specifically evaluated on that same shared test split rather than a separate one).
+- **Training/predictions:** all 5 trained and predict with zero errors.
+- **Accuracy / Weighted F1 / Confusion Matrix:** reported per algorithm (see Part 3 table); confusion matrices shown both as a compact grid across all 10 models and in full labelled detail for the best model so far.
+- **Preliminary comparison table (Part A only):** Decision Tree (F1 wtd 0.9863) > KNN (0.9798) > Logistic Regression (0.9542) > SVM (0.9451) > Gaussian Naive Bayes (0.8987).
 
 ---
 
-## PART 10 — Feature Engineering
+## 12. Classification — Review 2, Part B (full detail)
 
-**Feature name:** `header_payload_ratio`
+Covered algorithm-by-algorithm with real results in Part 3 above. Summary:
 
-**Original columns used:** `fwd_header_length`, `bwd_header_length` (header bytes), `total_length_of_fwd_packets`, `total_length_of_bwd_packets` (payload bytes).
+- **Final 10-model comparison table:** see Part 3 — includes Accuracy, Precision (weighted), Recall (weighted), F1 (weighted), F1 (macro, extra beyond the mandatory list), and ROC-AUC (OvR), exactly the metric set the PDF requires for Review 2 (plus one bonus metric).
+- **Tuning:** `RandomizedSearchCV` (cv=3) on Random Forest, SVM, and MLP:
 
-**Formula/logic:**
+| Model | F1 (weighted) before → after |
+|---|---|
+| SVM | 0.9451 → **0.9697** (clear improvement) |
+| Random Forest | 0.9856 → **0.9869** (small improvement) |
+| MLP | 0.9800 → 0.9779 (**got slightly worse** — reported honestly) |
+
+- **Model-selection process:** after tuning, a focused SMOTE comparison is applied to the single strongest tuned candidate (Random Forest, tuned) — F1 weighted stayed essentially flat (0.9869 → 0.9869) but F1 macro reached 0.9252, which is the number that actually reflects rare-class improvement. All 14 candidates (10 baselines + 3 tuned + 1 SMOTE variant) are then compared, and **Bagging remains the overall best** (F1 weighted 0.9873) — notably, Bagging was never itself one of the 3 models chosen for tuning, since it was already the strongest baseline.
+- **Confusion matrices:** a grid of all 10 (row-normalized) plus a fully labelled one + ROC curves for the best model.
+
+---
+
+## 13. Clustering — Review 2 (full detail)
+
+- **Why clustering:** to check for behavioral groupings the fixed 15-label scheme might not fully capture, with no ground truth used during fitting.
+- **Why labels aren't used during fitting:** `true_labels_kmeans`/`true_labels_hier` are set aside immediately after loading and never referenced again until the interpretation section at the end — verified directly in the code.
+- **Preprocessing:** 33 highly-correlated features (|r| > 0.9) dropped before scaling (distance-based methods are more sensitive to redundant features than trees/regularized regression); `StandardScaler` fit once and reused; PCA reduces to 22 components (95% variance retained) for the actual clustering, plus a separate 2-component PCA purely for visualization.
+- **Number of clusters:** k = 10 for K-Means, chosen via the silhouette score across k = 2–10 (the mandatory elbow curve is also shown).
+- **Algorithm logic:** K-Means iteratively assigns points to the nearest of k centers; Agglomerative Clustering repeatedly merges the closest pair of clusters, visualized via a dendrogram.
+- **A specific, real, presentable finding:** comparing linkage strategies, "average" linkage scored a *higher* raw silhouette (0.69) than "ward" (0.45) — but was rejected because it dumped 99.1% of points into a single cluster (a degenerate, useless split); "ward" (46.2% largest cluster) was chosen as the genuinely balanced option instead.
+- **Evaluation (all 3 mandatory metrics, for both algorithms):**
+
+| Metric | K-Means | Agglomerative (ward) |
+|---|---|---|
+| Silhouette | 0.426 | 0.453 |
+| Davies-Bouldin | 0.899 | 1.021 |
+| Calinski-Harabasz | 3709.8 | 1090.6 |
+
+  (not directly comparable to each other — different sample sizes, as documented in the notebook's own "possible mistakes" section)
+
+- **Visualizations (all mandatory per the PDF):** Elbow curve (K-Means) ✓, Dendrogram (Agglomerative) ✓, PCA 2D scatter **for both algorithms** ✓ (`kmeans_pca_2d.png`, `agglomerative_pca_2d.png`), t-SNE for at least one algorithm ✓ (Agglomerative).
+- **[TEAM TO CONFIRM] Interpretation (labels brought back only now):** several clusters are highly "pure" — e.g. one cluster is 98.9% `DoS GoldenEye`, another 98.8% `DoS Slowhttptest`, another 90.9% `Heartbleed` — while the single largest cluster (15,240 points) is a mixed bag dominated by `PortScan` at only 17.1%, showing genuine behavioral overlap rather than a forced 1-to-1 mapping to the 15 labels. The team should look at `cluster_profile` in the notebook themselves and be ready to describe this in their own words.
+
+---
+
+## 14. Pipeline Integration & Quality (Review 2, Section C)
+
+**[VERIFIED FACT]**
+- **Notebooks run top-to-bottom without errors:** confirmed this session via a clean-kernel `jupyter nbconvert --execute` on all 4 notebooks — 0 errors across 157 total cells.
+- **Modular functions:** shared logic lives in `src/preprocessing.py` (`load_and_merge_csvs`, `standardize_columns`, `clean_data`, `check_outliers`, `engineer_features`, `encode_labels`, `split_data`, `scale_features`, `stratified_sample`), `src/risk_score.py` (`RiskScoreCalculator`), and `src/utils.py` (plotting/evaluation helpers) — not repeated inline per notebook.
+- **Markdown/comments:** every major code block in every notebook is preceded by a Markdown heading/explanation; no unexplained "wall of code" sections found.
+- **`random_state=42`:** used consistently across `src/` and all 4 notebooks (verified by direct search).
+- **No data leakage:** scalers, encoders, and the custom risk score are all fit on training data only, confirmed by reading the code, not assumed.
+- **Consistent train/test split:** confirmed for every model within each track, including the SVM/SVR fix described in Part 15 below.
+- **Summary tables instead of scattered prints:** both tracks' comparisons use a single `pandas.DataFrame`, not individual print statements.
+
+---
+
+## 15. README + GitHub Requirements — Checked Against the Repository
+
+**README.md — required contents, verified against actual current headings [VERIFIED FACT]:**
+
+| Required | Present? | Section |
+|---|---|---|
+| Dataset description | Yes | `## Dataset`, `## Overview` |
+| Problem statement | Yes | `## Problem statement` |
+| Results summary table | Yes | `## Results` (filled with real numbers this session) |
+| Environment setup | Yes | `## Installation` |
+| How-to-run instructions | Yes | `## Usage` |
+
+**GitHub repository structure — required vs. actual [VERIFIED FACT]:**
+
+| Required | Present? |
+|---|---|
+| `README.md` | Yes |
+| `requirements.txt` | Yes |
+| `data/` (raw files or download script) | `data/raw/` and `data/processed/` exist; raw CSVs are intentionally `.gitignore`d (several GB) with download instructions in the README instead — an explicitly allowed alternative per the PDF ("Raw dataset file(s) **or** a script to download them"). |
+| `notebooks/` | Present, but named `01_EDA.ipynb`/`02_Classification.ipynb`/`03_Regression.ipynb`/`04_Clustering.ipynb` rather than the PDF's example `regression.ipynb`/`classification.ipynb`/`clustering.ipynb` — see the naming note in Part 7. |
+| `models/` (optional) | Present, with per-track subfolders; actual `.joblib`/`.json` artifacts are `.gitignore`d (regenerated by running the notebooks) |
+| `app/` (if attempting bonus) | Present — `app/streamlit_app.py` |
+
+**Commit history — "meaningful milestones, not a single bulk upload" [VERIFIED FACT, and a real issue to flag]:**
+
 ```
-header_payload_ratio = (fwd_header_length + bwd_header_length) / (total_length_of_fwd_packets + total_length_of_bwd_packets + 1)
+9e6d61d  2026-08-04  Initial commit: CyberSentinel SIEM ML pipeline
+0fed4b5  2026-09-29  Update ML notebooks, preprocessing, and README   (3116 insertions, 483 deletions)
+06e4605  2026-09-29  Update ML notebooks, preprocessing, and README   (711 insertions, 1072 deletions)
+2e14452  2026-09-29  Update ML notebooks, preprocessing, and README   (697 insertions)
 ```
-(the `+1` in the denominator just avoids dividing by zero when a flow has no payload at all.)
 
-**Why it was created:** none of the 78 raw columns directly expresses "how much of this flow's bytes are protocol overhead vs. actual data." Header length and payload length only exist as separate columns.
-
-**What it represents, in simple language:** a normal, useful connection (like downloading a file) sends a lot of actual data compared to its small, fixed header overhead — so the ratio is small. A connection that's mostly "empty" — like a port scan or a probe that never really sends data — is *mostly* header, so the ratio spikes.
-
-**How it may help the model:** it hands a tree-based model a single, pre-computed signal instead of forcing it to learn the same division implicitly from two separate columns across many tree splits. It's also **verified to work as intended**: in our scatter-plot analysis (Part 6), the single most extreme value of this ratio in a 6,000-row sample belongs to a real `DoS Slowhttptest` flow — an attack that specifically works by sending almost no payload while holding a connection open. That's not something we assumed; it's what the actual data showed.
-
-**This is the only engineered feature currently in the project** — there is no second one to report.
+There **are** 4 distinct commits (not a single bulk upload), so the letter of "not one commit" is satisfied. However, **the 3 most recent commits share an identical, generic message** rather than descriptive milestone messages like the PDF's own examples ("Add Random Forest with GridSearchCV", "Complete clustering EDA"). This is worth improving — **[ACTION NEEDED]** either make future commits genuinely descriptive, or consider whether the team wants to present this history as-is and be ready to explain it in viva if asked. This is not something to leave unaddressed and assume is fine.
 
 ---
 
-## PART 11 — Preprocessing Explanation
+## 16. Bonus — GUI / Deployment
 
-**Missing-value handling:** CICFlowMeter occasionally produces `Infinity` values (dividing bytes/packets by a flow duration of exactly zero). We convert these to `NaN` and drop those rows — 2,867 rows (0.10%), reported explicitly rather than silently dropped.
-
-**Duplicate handling:** exact duplicate rows (307,078, 10.85%) are removed. This is the largest single source of row loss in cleaning — bigger than the Infinity/NaN issue by far.
-
-**Outlier handling:** checked (IQR rule) but **deliberately not removed**. In this dataset, an "outlier" (a huge packet flood, a near-zero-duration flow) is very often the actual attack signal, not a measurement mistake — and blindly removing statistical outliers would disproportionately delete the already-rare attack rows. Instead we rely on `StandardScaler` and on tree-based models (which split on order, not magnitude, and don't care about extreme values the way distance-based models do).
-
-**Label encoding:** only the target column needs it — `LabelEncoder` turns the 15 text labels into numbers 0–14 so classifiers can work with them, and it's reversible (`inverse_transform`) to turn predictions back into readable names.
-
-**Feature scaling:** `StandardScaler` — rescales every numeric feature to have mean 0 and standard deviation 1. Needed because algorithms like SVM, KNN, and neural networks are sensitive to features being on very different numeric scales (e.g., `destination_port` ranges up to 65,535 while a flag count might be 0 or 1).
-
-**Train/test split:** 80:20, `random_state=42` for reproducibility.
-
-**Stratification:** the split preserves each class's original proportion in both the train and test sets — essential here, since without it, a random split could easily put *zero* `Heartbleed` rows (only 11 exist) into the test set by chance.
-
-**Data leakage — what it is and why we avoid it:** leakage means information from the test set (or the future) accidentally influencing how the model was trained — making test performance look better than it would be on genuinely new data. A classic example: fitting a scaler on the *entire* dataset before splitting means the scaler's mean/std already "saw" the test rows.
-
-**Why the scaler must be fitted only on training data:** so the numbers used to rescale every feature come *only* from what the model is allowed to learn from — the test set stays a true, untouched simulation of "new, unseen data." Our project does this everywhere: `StandardScaler`, the custom risk-score's percentile boundaries, and label encoding, are all fit on the training split only.
-
-**Why the same test split is used across models:** to make model comparisons fair. If SVM were tested on a different, easier subset of rows than Random Forest, a higher SVM score wouldn't tell you SVM is actually better — it might just mean SVM got an easier test set. *(This was an actual bug we found and fixed in the project — see Part 15.)*
+**[VERIFIED FACT / NOT VERIFIED]**
+- `app/streamlit_app.py` **exists** (26,659 bytes) and, by inspection, reads saved model artifacts from `models/{classification,regression,clustering}/` and presents a SOC-style dashboard with a detection page, model analytics, and a threat-intelligence page.
+- **Not verified this session:** whether the app actually launches and runs without errors — this documentation task did not include starting the Streamlit server. **[ACTION NEEDED]** the team should run `streamlit run app/streamlit_app.py` themselves and confirm it works end-to-end before claiming the +1 GUI bonus.
+- **Public deployment:** no evidence of deployment configuration (no Streamlit Cloud/HF Spaces/Render config files, no deployed URL mentioned anywhere in the repo). **Status: not present.** The +1 deployment bonus and the +2 combined bonus are **not currently claimable** unless the team deploys it themselves.
 
 ---
 
-## PART 12 — Machine Learning Algorithm Cheat Sheet
+## 17. Three-Member Team Structure (by complete track, per the official rule)
 
-### Classification
-
-| Algorithm | Type | Basic idea | Why used | Key parameter(s) |
-|---|---|---|---|---|
-| Logistic Regression | Linear | Fits a (linear) probability boundary between classes. | Fast, interpretable baseline. | `class_weight`, `max_iter` |
-| KNN | Instance-based | Votes among the k nearest training points. | Simple, no training phase, good baseline. | `n_neighbors` |
-| Gaussian Naive Bayes | Probabilistic | Assumes features are independent & normally distributed. | Extremely fast baseline. | (none tuned) |
-| Decision Tree | Tree-based | Learns if/else splits on feature thresholds. | Interpretable, captures non-linear splits. | `max_depth`, `class_weight` |
-| SVM | Margin-based | Finds the widest-margin boundary (RBF = curved boundary here). | Strong on complex boundaries. | `C`, `gamma` |
-| Random Forest | Ensemble (bagging) | Many trees on random subsets, majority vote. | Robust, usually strong out of the box. | `n_estimators`, `max_depth` |
-| AdaBoost | Ensemble (boosting) | Sequential weak learners focusing on past mistakes. | Classic boosting comparison point. | `n_estimators` |
-| Gradient Boosting | Ensemble (boosting) | Sequential trees fit to residual errors. | Often very accurate, slower to train. | `n_estimators`, `max_depth` |
-| Bagging | Ensemble (bagging) | Many base estimators on bootstrap samples, averaged. | Ended up our top performer here. | `n_estimators` |
-| MLP | Neural network | Layers of weighted connections learned via backpropagation. | Captures complex non-linear patterns. | `hidden_layer_sizes`, `alpha` |
-
-### Regression
-
-| Algorithm | Type | Basic idea | Why used | Key parameter(s) |
-|---|---|---|---|---|
-| Linear Regression | Linear | Fits one straight-line relationship. | Baseline. | (none) |
-| Ridge | Linear (regularized) | Linear + L2 penalty shrinks coefficients. | Handles correlated features gently. | `alpha` |
-| Lasso | Linear (regularized) | Linear + L1 penalty can zero out coefficients. | Automatic feature selection. | `alpha` |
-| ElasticNet | Linear (regularized) | Blend of Ridge + Lasso penalties. | Balances both effects. | `alpha`, `l1_ratio` |
-| Polynomial Regression | Linear on expanded features | Adds squared/interaction terms, then linear fit. | Captures curved relationships (restricted to the 5 risk indicators here). | `degree` |
-| Decision Tree Regressor | Tree-based | Piecewise-constant predictions per region. | Captures threshold-like structure. | `max_depth` |
-| Random Forest Regressor | Ensemble (bagging) | Many regression trees averaged. | Our top performer. | `n_estimators`, `max_depth` |
-| Gradient Boosting Regressor | Ensemble (boosting) | Sequential trees fit to residuals. | Strong, comparison point. | `n_estimators`, `max_depth` |
-| SVR | Margin-based | Fits within an error-tolerance "tube." | Different approach, comparison point. | `kernel`, `C` |
-| KNN Regression | Instance-based | Averages the target of the nearest points. | Simple baseline. | `n_neighbors` |
-
-### Clustering
-
-| Algorithm | Type | Basic idea | Why used | Key parameter(s) |
-|---|---|---|---|---|
-| K-Means | Centroid-based | Assigns points to the nearest of k centers, iterating. | Fast, standard first choice for clustering. | `n_clusters` (k) |
-| Agglomerative Clustering | Hierarchical | Repeatedly merges the closest pair of clusters. | Gives a full merge hierarchy (dendrogram); cross-checks K-Means. | `n_clusters`, `linkage` |
-
----
-
-## PART 13 — Evaluation Metrics
-
-### Classification
-
-- **Accuracy** — *what it measures:* the fraction of predictions that were exactly correct. *High/low:* closer to 1.0 is better. *Why we use it:* the most intuitive metric, but **misleading alone here** because predicting `BENIGN` for everything would already score ~83% accuracy while catching zero attacks. *Example:* 987 correct out of 1,000 predictions = 0.987 accuracy.
-- **Weighted F1-score** — *what it measures:* the balance of precision (of the flows I predicted as class X, how many really were X?) and recall (of the flows that really were X, how many did I catch?), averaged across classes weighted by how common each class is. *High/low:* closer to 1.0 is better. *Why we use it:* more informative than accuracy alone when classes are imbalanced.
-- **F1 (macro)** — the same idea, but averaged treating every class *equally*, regardless of size. *Why it matters here:* this is the number that actually reveals whether the model is failing on rare classes like `Heartbleed`, since weighted F1 can hide that behind BENIGN's huge volume.
-- **Confusion matrix** — *what it measures:* a full breakdown of true class vs. predicted class. *Why we use it:* shows *which specific* mistakes a model makes (e.g., confusing two similar DoS variants) rather than a single summary number.
-
-### Regression
-
-- **R² (R-squared)** — *what it measures:* the proportion of variance in the target the model explains, from 0 (no better than guessing the average) to 1 (perfect). *Example:* R² = 0.999 means the model's predictions track the true risk score almost perfectly.
-- **RMSE (Root Mean Squared Error)** — *what it measures:* the typical size of prediction errors, in the same units as the target, with larger errors penalized more heavily than smaller ones. *High/low:* lower is better. *Example:* RMSE = 0.39 on a 0–100 scale means predictions are typically off by well under 1 point.
-- **MAE (Mean Absolute Error)** — *what it measures:* the average absolute size of prediction errors, treating all errors equally regardless of size. *High/low:* lower is better. *Why both RMSE and MAE:* RMSE punishes big misses harder; comparing the two tells you whether a model has a few very large errors or many small consistent ones.
-
-### Clustering
-
-- **Silhouette score** (range -1 to 1, higher better) — measures how much closer a point is to its own cluster than to the next-nearest cluster. A value near 0 means clusters overlap; a value near 1 means they're well-separated.
-- **Davies-Bouldin index** (0+, lower better) — average similarity between each cluster and its most-similar neighboring cluster; lower means clusters are more distinct from each other.
-- **Calinski-Harabasz index** (0+, higher better) — ratio of between-cluster spread to within-cluster spread; higher means clusters are both tight internally and well-separated externally.
-
----
-
-## PART 14 — Hyperparameter Tuning
-
-**What is a hyperparameter?** A setting you choose *before* training that controls how a model learns (e.g., how many trees in a forest, how deep a tree can grow) — as opposed to the model's internal weights/splits, which are *learned* from data.
-
-**Why tuning is required:** the default settings for an algorithm are rarely the best fit for a specific dataset; searching nearby settings can meaningfully change performance.
-
-**Which models we tuned:**
-- Classification: Random Forest, SVM, MLP (3 models).
-- Regression: Random Forest, Decision Tree (2 models — the top 2 by R², satisfying the "at least 2" requirement).
-
-**Which parameters, and why they matter (examples):**
-- Random Forest: `n_estimators` (how many trees — more can mean better but slower), `max_depth` (how deep each tree grows — too deep risks overfitting), `max_features` (how many features each split considers).
-- SVM: `C` (how strongly to penalize misclassified points — controls the margin's strictness), `gamma` (how far the influence of a single training point reaches).
-- MLP: `hidden_layer_sizes` (network shape), `alpha` (regularization strength), `learning_rate_init`.
-- Decision Tree: `max_depth`, `min_samples_split`, `min_samples_leaf` (all control how much the tree is allowed to grow/split, trading fit against overfitting).
-
-**What `RandomizedSearchCV` does:** instead of trying *every* combination in a parameter grid (which can be very slow), it randomly samples a fixed number of combinations and keeps the best-scoring one — a practical trade-off between thoroughness and speed.
-
-**What cross-validation means:** instead of judging a parameter combination on just one train/validation split (which could be lucky or unlucky), the training data is split into several "folds," and the model is trained/validated multiple times, rotating which fold is held out — giving a more reliable average score. We used `cv=3` inside the tuning search, plus a separate standalone 5-fold CV check on the top-2 models in each track.
-
-**What actually changed, before vs. after tuning (real results, not fabricated):**
-
-| Track | Model | Before | After | Direction |
-|---|---|---|---|---|
-| Classification | SVM (F1 weighted) | 0.9451 | 0.9697 | Clear improvement |
-| Classification | Random Forest (F1 weighted) | 0.9856 | 0.9869 | Small improvement |
-| Classification | MLP (F1 weighted) | 0.9800 | 0.9779 | **Got slightly worse** |
-| Regression | Random Forest (R²) | 0.9992 | 0.9993 | Small improvement |
-| Regression | Decision Tree (R²) | 0.9985 | 0.9985 | Essentially flat |
-
-We report the MLP and Decision Tree results honestly rather than only highlighting favorable numbers — tuning does not guarantee improvement on the specific held-out test set every time, since the search is optimizing a cross-validated *training-data* score, not the exact test score.
-
----
-
-## PART 15 — Important Project-Specific Issues
-
-**1. `destination_port` shortcut-learning risk**
-- *What it is:* 11 of the 15 classes sit 100% on a single destination port (e.g., every DoS/DDoS variant on port 80).
-- *Why it matters:* a model could achieve high accuracy by essentially memorizing "port → label" instead of learning real traffic behavior, which would look great on this dataset but fail against the same attack on a different port.
-- *What we currently did:* measured and documented it explicitly (a dedicated check in `01_EDA.ipynb`); kept `destination_port` as a feature since it *is* real signal, not fabricated; flagged it in both the classification and regression notebooks' "possible mistakes" and final-summary sections.
-- *Future improvement:* retrain the winning classifier *without* `destination_port` and compare — a robustness/ablation check the notebook explicitly recommends but does not perform (a deliberate scope decision, not an oversight).
-
-**2. Severe class imbalance**
-- *What it is:* 190,459.7 : 1 ratio between the largest and smallest classes.
-- *Why it matters:* a model can score deceptively well on accuracy while never detecting the rarest attacks.
-- *What we currently did:* `class_weight="balanced"`, stratified sampling everywhere, SMOTE (applied to the strongest tuned candidate only, on training data only), and reporting macro-F1 alongside weighted F1 specifically to surface this.
-- *Future improvement:* apply SMOTE (or a cost-sensitive approach) to more than just one candidate model, and/or gather more real examples of the rarest classes.
-
-**3. Outliers are frequently the actual signal**
-- *What it is:* extreme values in flow features (flood-level packet rates, near-zero durations).
-- *Why it matters:* a "clean the outliers" default strategy would delete exactly the rare-attack rows this project is trying to detect.
-- *What we currently did:* checked and explicitly chose not to remove them, relying on scaling + tree-model robustness instead.
-- *Future improvement:* none needed by default, but worth revisiting if a future non-tree, non-scaled model is added.
-
-**4. Highly correlated features**
-- *What it is:* 71 feature pairs with |r| ≥ 0.9, mostly the same underlying quantity recorded twice by the source tool.
-- *Why it matters:* redundant features double-count in distance-based methods (clustering) and add noise without adding information.
-- *What we currently did:* dropped 33 correlated features before clustering only; kept all features for classification/regression since tree-based and regularized models tolerate redundancy far better than distance-based clustering does.
-- *Future improvement:* could try dropping the same features for classification/regression as an ablation to see if it changes anything meaningfully.
-
-**5. Computational constraints → subsampling**
-- *What it is:* the full cleaned dataset is 2,520,798 rows; training and tuning 10 algorithms (some with poor scaling behavior) on all of it isn't practical on a laptop.
-- *Why it matters:* results are measured on a representative *sample*, not the full population — a real, disclosed limitation.
-- *What we currently did:* `stratified_sample()` caps dominant classes while keeping every rare class fully intact, so no attack category disappears; SVM and SVR specifically use an even smaller training subsample (since their training cost scales worse than linearly) but are evaluated on the same shared test split as every other model.
-- *Future improvement:* scale up with more compute, or a genuinely scalable algorithm (e.g., `HistGradientBoostingClassifier`, `MiniBatchKMeans`) trained on the full dataset.
-
-**6. A real bug we found and fixed this session: unfair model comparison**
-- *What it was:* SVM (classification) and SVR (regression) were originally trained *and evaluated* on their own separate, smaller train/test split — meaning their reported scores weren't measured on the same test data as the other 9 models in each track.
-- *Why it mattered:* this directly violates the "same test split for fair comparison" requirement, and made SVM/SVR's ranking not directly comparable to the rest of the table.
-- *What we did:* rewired both to train on a subsample of the *same* shared training data (keeping the speed benefit) but evaluate on the exact same shared test split as every other model in the track.
-- *Status:* fixed and re-verified; this is why SVM's classification score changed materially between the "before" and "after" versions of the notebook.
-
----
-
-## PART 16 — Three-Member Team Division
-
-*(Names to be filled in by the team — roles are assigned by **complete track ownership**, not by individual steps, per the project guideline that each member should be able to explain their entire assigned track end-to-end during viva.)*
+*(Names to be filled in — the PDF requires ownership by complete track, explicitly warning against splitting "one person does EDA, one does models, one does slides.")*
 
 ### Member 1 — [Name to fill]
-**Primary ownership:** `01_EDA.ipynb` + the shared `src/` modules (`preprocessing.py`, `risk_score.py`, `utils.py`)
-**Supporting knowledge:** should also be comfortable explaining *why* certain EDA findings (imbalance, correlation, destination-port leakage) shape decisions in the other three notebooks, since this track feeds all of them.
-**Must be able to explain:** the full cleaning pipeline (Infinity/duplicates), the outlier-checking decision and its justification, the `header_payload_ratio` feature end-to-end, every EDA visualization and what it showed, and why the shared `src/` functions exist instead of being repeated per-notebook.
+**Primary track:** `01_EDA.ipynb` (feeds every other track) + the shared `src/` modules.
+**Secondary responsibilities:** understanding how EDA findings (imbalance, correlation, port leakage) drove decisions in the other three notebooks.
+**Must explain line-by-line:** the cleaning pipeline, the outlier-check justification, the `header_payload_ratio` feature end-to-end, and every EDA visualization.
+**Likely viva questions:** "Why did you check outliers but not remove them?" / "Walk us through how `header_payload_ratio` is calculated and why." / "Why is `destination_port` kept as a feature despite the leakage risk you found?"
 
 ### Member 2 — [Name to fill]
-**Primary ownership:** `02_Classification.ipynb`
-**Supporting knowledge:** the class-imbalance findings from EDA (since they directly justify this track's design choices).
-**Must be able to explain:** all 10 classification algorithms at a basic level, why the same test split matters (and the real bug that was fixed here), the comparison table and what it shows, SMOTE and what it changed, the 3-model tuning results (including why MLP got *worse*), and the confusion-matrix/ROC-curve outputs.
+**Primary track:** `02_Classification.ipynb` (all 10 algorithms, Part A and Part B).
+**Secondary responsibilities:** the EDA imbalance finding, since it directly justifies this track's design.
+**Must explain line-by-line:** all 10 classifiers at a basic level, the SVM shared-test-split fix, the full comparison table, SMOTE's effect, and the 3-model tuning results (including why MLP got worse).
+**Likely viva questions:** "Why weighted F1 and not just accuracy?" / "What does AdaBoost's low macro-F1 tell you?" / "Explain One-vs-Rest ROC-AUC." / "Why did SMOTE barely change weighted F1 but change macro F1?"
 
 ### Member 3 — [Name to fill]
-**Primary ownership:** `03_Regression.ipynb` + `04_Clustering.ipynb`
-**Supporting knowledge:** how the regression track's risk score connects back to EDA's behavioral features, and how clustering's correlation-pruning connects back to EDA's correlation analysis.
-**Must be able to explain:** how the custom risk score is built and why it isn't a label lookup, all 10 regression algorithms at a basic level, the regression comparison table and tuning results, why R²/RMSE/MAE (not accuracy) apply here, K-Means vs. Agglomerative clustering, the "average linkage rejected despite higher silhouette" finding, and what the interpreted clusters mean.
+**Primary track:** `03_Regression.ipynb` + `04_Clustering.ipynb`.
+**Secondary responsibilities:** how the risk score connects to EDA's behavioral features; how clustering's correlation-pruning connects to EDA's correlation analysis.
+**Must explain line-by-line:** how the custom risk score is built (and why it's not a label lookup), all 10 regressors, the regression tuning results, K-Means vs. Agglomerative, the "average linkage rejected despite higher silhouette" finding, and cluster interpretation.
+**Likely viva questions:** "Why isn't the risk score just a label lookup?" / "Why did you reject the linkage method with the better silhouette score?" / "Why can't you compare K-Means and Agglomerative's metrics directly?"
 
-*(Regression and Clustering are paired for one member since EDA is unusually large — it underpins every other notebook — and Classification alone is the most complex single track, given its 10 algorithms, SMOTE step, and SHAP/explainability section.)*
-
-### What all three members should know, regardless of track
-- The overall project objective (Part 1) and that it covers classification, regression, *and* clustering.
-- What the dataset is (CICIDS2017), what one row/column means, and the severe class imbalance.
-- The full pipeline, start to finish (Part 4).
-- Why scaling/encoding must be train-only, and why the same test split matters across models.
-- A basic one-sentence idea of every algorithm used (Part 12).
-- The headline results: Bagging won classification (F1 weighted 0.9873); Random Forest won regression (R² 0.9993 tuned); K-Means found k=10 with several behaviorally-pure clusters.
-- The main limitations: sampled (not full) data, `destination_port` leakage risk, near-ceiling regression R² being partly a validation artifact.
+*(Rationale for pairing Regression + Clustering under one member: EDA is unusually large since it underpins every other notebook, and Classification alone is the most complex single track — 10 algorithms, SMOTE, and an explainability/SHAP section.)*
 
 ---
 
-## PART 17 — Viva Questions and Answers
+## 18. What All 3 Members Must Know
 
-**Basic**
+- **Project objective:** classify attack type, predict a risk score, and cluster behavior — from CICIDS2017 flow data.
+- **Dataset:** CICIDS2017, 2,520,798 cleaned rows, 15 classes, severe imbalance.
+- **Complete pipeline:** Part 6 above.
+- **Preprocessing:** train-only-fit scaling, stratified 80:20 split, same split reused per track.
+- **Feature engineering:** `header_payload_ratio` — what it is and why.
+- **Basic idea of every algorithm:** Part 3 tables.
+- **Evaluation metrics:** Accuracy/F1/confusion matrix/ROC-AUC (classification); R²/RMSE/MAE (regression); Silhouette/Davies-Bouldin/Calinski-Harabasz (clustering).
+- **Important results:** Bagging won classification (F1 wtd 0.9873); Random Forest won regression (R² 0.9993 tuned); K-Means found k=10, several clusters behaviorally pure.
+- **Limitations:** sampled (not full 2.52M-row) training; `destination_port` leakage risk; near-ceiling regression R² partly a validation artifact.
+- **GitHub structure:** present, but recent commit messages are generic — see Part 15.
+- **README:** all 5 required elements present.
+- **Deployment/GUI status:** GUI code exists, **not yet verified to run**; no public deployment exists.
 
-- *What is your project?* "An intrusion-detection ML pipeline on real network traffic data (CICIDS2017) that classifies attack type, predicts a custom risk score, and clusters traffic by behavior."
-- *Why did you choose this dataset?* "It's a well-known, publicly available cybersecurity research dataset with real captured attacks alongside normal traffic, at the flow level rather than raw packets, which makes it usable for classical ML."
-- *What is the target?* "For classification, the `label` column — 15 attack categories plus BENIGN. For regression, a risk score we built ourselves, not a column in the raw data."
-- *What does one row represent?* "One network flow — a summarized conversation between two endpoints, not a single packet."
+---
 
-**EDA**
+## 19. Viva Question Bank
 
-- *Why did you perform EDA?* "To understand the data before modeling — specifically, we found severe class imbalance and 71 highly-correlated feature pairs that directly shaped our later preprocessing choices."
-- *Why correlation heatmap?* "To catch redundant features before they distort distance-based methods like clustering."
-- *Why scatter plots?* "To visually check whether pairs of features separate attack types from normal traffic — we found Bot traffic forms a visually distinct cluster on one of ours."
-- *What did you observe?* "BENIGN is 83% of the data; the imbalance ratio is over 190,000:1; several columns are essentially duplicates of each other; `destination_port` is 100%-concentrated on one port for 11 of 15 classes."
-- *Why check outliers?* "To decide, with evidence, whether to remove them — we found they're frequently the actual attack signal here, so we kept them."
+**Basic project**
+- *What is your project?* "An ML pipeline on CICIDS2017 network-traffic data covering all three required tracks: regression (risk score), classification (attack type), and clustering (behavior groups)."
+- *Why this dataset?* "It's a real, published cybersecurity dataset with genuine captured attacks, at the flow level, which suits classical ML."
 
-**Preprocessing**
-
-- *Why scaling?* "Algorithms like SVM and KNN are sensitive to features being on very different numeric scales."
-- *Why encoding?* "Only the target is text; `LabelEncoder` turns it into numbers models can use."
-- *Why stratified split?* "To make sure rare classes (like Heartbleed's 11 rows) actually appear in both the train and test sets."
-- *What is data leakage?* "Information from the test set improperly influencing training, making test performance look better than it really would be on new data."
-- *Why fit the scaler only on training data?* "So the test set stays a genuine simulation of unseen data — otherwise the scaler's mean/std would already 'know' about the test rows."
-
-**Feature engineering**
-
-- *What is `header_payload_ratio`?* "The ratio of header bytes to payload bytes in a flow — high when a flow is mostly protocol overhead and almost no real data."
-- *Why did you create it?* "None of the raw columns expresses this relationship directly, and it's a cheap, interpretable signal for probing-style traffic."
-- *How can it help prediction?* "It gives models this relationship pre-computed instead of forcing them to learn the division implicitly — and we verified it: the most extreme value in our sample was a real DoS Slowhttptest flow, matching that attack's known behavior."
-
-**Classification**
-
-- *Why these classifiers?* "They cover a spread of approaches — linear, instance-based, probabilistic, tree-based, ensemble, and neural network — for a fair comparison."
-- *Why accuracy?* "It's the most intuitive metric, though we don't rely on it alone because of the class imbalance."
-- *Why weighted F1?* "It balances precision and recall and accounts for class sizes, giving a fairer single summary number than accuracy alone."
-- *What does a confusion matrix tell us?* "Exactly which classes get confused with which — not just an overall score."
-
-**Regression**
-
-- *Why regression?* "Because 'how risky is this traffic' is naturally a continuous number, not a fixed category."
-- *What is R²?* "The proportion of variance in the target the model explains — 1.0 is a perfect fit."
-- *What is RMSE?* "The typical size of prediction error, penalizing large errors more."
-- *What is MAE?* "The average absolute prediction error, treating all errors equally."
-- *Why use multiple regression algorithms?* "To compare simple linear models against tree-based and margin-based approaches fairly, on the same data."
-- *Why tune hyperparameters?* "Default settings aren't always best for a specific dataset; tuning searches nearby settings for a better fit."
-- *What is cross-validation?* "Splitting training data into folds and rotating which one is held out, to get a more reliable performance estimate than a single split."
+**Dataset**
+- *What does one row represent?* "One network flow — a summarized connection, not a packet."
+- *How imbalanced is it?* "190,459.7-to-1, BENIGN vs. Heartbleed."
+- *What data-quality issues did you find?* "A negative flow duration value, a duplicate-looking column pair, and a text-encoding glitch in three label names — all documented, none silently fixed without saying so."
 
 **Cybersecurity**
+- *What is a DoS attack?* "Flooding a target so it can't serve real users." *DDoS?* "Same idea, from many sources at once."
+- *What does destination_port tell you?* "The service being targeted — and in our data, a strong but risky signal, since most attack types sit on one fixed port."
 
-- *What is network traffic?* "All the data conversations happening across a network."
-- *What is a network flow?* "One summarized conversation between two endpoints — the unit our whole dataset is built from."
-- *What is DoS?* "Flooding a target so it can't serve real users."
-- *What is DDoS?* "The same idea, but from many sources at once."
-- *Why can ML detect attacks?* "Because different attack types have measurably different flow statistics — e.g., flood attacks have very high packet rates and short durations."
-- *What does `destination_port` mean?* "The service the traffic is aimed at, e.g., port 80 for web traffic — and in our data, a strong (if risky) signal since most attack types concentrate on one port."
-- *What do bytes/packets/duration represent?* "How much data moved, how many packets were exchanged, and how long the connection lasted — the core building blocks of every flow statistic in this dataset."
+**EDA**
+- *Why a correlation heatmap?* "To catch redundant features before they distort distance-based clustering."
+- *Why check outliers if you're not removing them?* "To make an informed, justified decision instead of blindly dropping or blindly keeping them — we found they're often the actual attack signal here."
 
-**Project-specific**
+**Preprocessing**
+- *What is data leakage, concretely, in your project?* "If we'd fit the scaler or the risk-score's percentile boundaries on the full dataset instead of the training split only, information from the test set would leak into training — we specifically avoid this everywhere."
+- *Why stratified split?* "So rare classes like Heartbleed (11 rows) actually appear in both splits."
 
-- *What are the major findings?* "Severe imbalance requiring special handling; 71 correlated feature pairs; a real destination-port leakage risk; Bagging won classification; Random Forest won regression; K-Means found 10 clusters, some highly pure, one large mixed cluster."
-- *What are the limitations?* "Trained on a stratified sample, not the full 2.52M rows; SVM/SVR see fewer training rows than other models; the regression R² is partly inflated because the risk score is a deterministic function of the same input features."
-- *What would you improve?* "Retrain without `destination_port` as a robustness check; scale training to the full dataset with a more scalable algorithm; extend SMOTE/tuning to more models."
-- *What happens if the model sees unseen data?* "It should generalize reasonably well within the same kind of traffic our test split represents, but a genuinely new attack type or non-standard port usage could expose the `destination_port` shortcut-learning risk we found."
-- *How would this work in a real-world deployment?* "The trained models, scaler, and label encoder are saved and consumed by a Streamlit dashboard (`app/streamlit_app.py`) that can score newly uploaded traffic — though that dashboard itself is a demonstration, not a production security product."
+**Feature engineering**
+- *Walk us through `header_payload_ratio`.* "(header bytes) divided by (payload bytes) — high when a flow is mostly overhead, almost no real data, which we found matches DoS Slowhttptest's actual behavior in our sample."
+
+**Regression**
+- *Why is Polynomial Regression's R² so low?* "It's restricted to only the 5 risk-score indicator features, not all 79 — not a fair comparison to the other 9 models, and we say so explicitly."
+- *What's the difference between R², RMSE, and MAE?* "R² is how much variance is explained (0–1); RMSE and MAE are both average error size, but RMSE punishes large errors more."
+- *Why tune Random Forest and Decision Tree specifically?* "They were the top 2 by R² in the untuned comparison — the PDF requires tuning at least 2 models, and cross-validation for the top 2."
+
+**Classification**
+- *Why do you report macro-F1 alongside weighted F1?* "Weighted F1 can hide poor performance on rare classes behind BENIGN's volume; macro-F1 treats every class equally, which is how we caught AdaBoost's weakness."
+- *Explain One-vs-Rest ROC-AUC.* "For each of the 15 classes, treat it as one-vs-everything-else, compute that ROC-AUC, then average across classes."
+- *Why did MLP get worse after tuning?* "The search optimizes a cross-validated training-data score, which doesn't always align perfectly with the specific held-out test set's score — a real, honestly-reported outcome, not a bug."
+
+**Clustering**
+- *Why are labels not used until the end?* "Clustering is meant to discover structure blind to labels; we only bring labels back afterward, purely to describe what a cluster turned out to represent."
+- *Why did you reject 'average' linkage despite its higher silhouette score?* "It put 99.1% of points in one cluster — a degenerate, useless split. Silhouette alone doesn't catch that; we added a balance check specifically because of this."
+
+**Hyperparameter tuning**
+- *What's the difference between GridSearchCV and RandomizedSearchCV, and which did you use?* "GridSearchCV tries every combination; RandomizedSearchCV samples a fixed number randomly — we used RandomizedSearchCV everywhere, since exhaustive grids would be too slow across this many models."
+- *What is cross-validation, concretely?* "Splitting training data into folds and rotating which fold is held out, to get a score less dependent on one lucky/unlucky split — we used `cv=3` inside tuning, plus a separate 5-fold check on the top-2 models."
+
+**Metrics**
+- *What does a Davies-Bouldin index of 0.899 mean?* "Lower is better; it measures how similar each cluster is to its most-similar neighboring cluster."
+
+**Data leakage**
+- *Give a concrete example from your own project where leakage could have happened but didn't.* "If we'd fit `StandardScaler` before splitting into train/test, the scaler's mean/std would already reflect test rows — we split first, then fit the scaler on the training rows only."
+
+**GitHub**
+- *Does your repo have a meaningful commit history?* "Yes, 4 distinct commits, though the 3 most recent share a generic message rather than being individually descriptive — something we're aware of and can improve." (Answer honestly if asked — don't claim it's perfect.)
+
+**Deployment**
+- *Do you have a working GUI?* "The code for a Streamlit dashboard exists and reads our saved models, but we haven't yet verified it runs end-to-end / haven't deployed it publicly." (Only claim more once the team has actually tested it.)
+
+**Limitations**
+- *What's the biggest limitation of your regression track?* "The R² looks almost perfect partly because the risk score is a deterministic function of the same input features — it measures how well we can reconstruct our own formula, not real-world risk-assessment accuracy against independent ground truth."
+
+**Future improvements**
+- *What would you do with more time?* "Retrain the classifier without `destination_port` as a robustness check; scale training to the full 2.52M rows with a more scalable algorithm; verify and deploy the Streamlit app for the bonus marks."
 
 ---
 
-## PART 18 — Before Viva: 5-Minute Revision
+## 20. Final 5-Minute Revision
 
-1. **Project title:** CyberThreat-ML — AI-Powered Cyber Threat Intelligence and Intrusion Detection System.
-2. **Problem statement:** Can flow-level network traffic statistics support detecting attack type, scoring risk, and discovering behavioral patterns using classical ML?
-3. **Dataset:** CICIDS2017 (Canadian Institute for Cybersecurity), 8 merged CSVs, 2,830,743 raw rows → 2,520,798 after cleaning.
-4. **Number of features:** 78 raw numeric features → 79 after our engineered feature (80 columns total including `label`).
-5. **Target:** `label` (classification, 15 classes) and a custom-built 0–100 risk score (regression).
-6. **Classification task:** predict attack type; 10 algorithms; Bagging won (F1 weighted 0.9873).
-7. **Regression task:** predict the 0–100 risk score; 10 algorithms; Random Forest won (R² 0.9993 tuned).
-8. **Clustering task:** unsupervised grouping by behavior; K-Means (k=10) + Agglomerative (ward linkage); several clusters behaviorally pure, one large mixed cluster.
-9. **Main preprocessing:** Infinity/duplicate cleaning, outliers checked but kept, train-only-fit scaling, stratified 80:20 split reused per track.
-10. **Engineered feature:** `header_payload_ratio` — validated against a real DoS Slowhttptest flow.
-11. **Classification algorithms:** Logistic Regression, KNN, Gaussian NB, Decision Tree, SVM, Random Forest, AdaBoost, Gradient Boosting, Bagging, MLP.
-12. **Regression algorithms:** Linear Regression, Ridge, Lasso, ElasticNet, Polynomial Regression, Decision Tree, Random Forest, Gradient Boosting, SVR, KNN Regression.
-13. **Evaluation metrics:** Accuracy/weighted+macro F1/confusion matrix (classification); R²/RMSE/MAE (regression); Silhouette/Davies-Bouldin/Calinski-Harabasz (clustering).
-14. **Hyperparameter tuning:** `RandomizedSearchCV` with cross-validation, on Random Forest/SVM/MLP (classification) and Random Forest/Decision Tree (regression); real, honestly-reported before/after results including one case (MLP) that got slightly worse.
-15. **Important result:** severe 190,459.7:1 class imbalance; 71 highly-correlated feature pairs; `destination_port` is a real leakage risk (11/15 classes 100% on one port).
-16. **Main limitation:** trained on a stratified sample of the full dataset; regression R² is partly a validation artifact since the risk score is derived from the same input features.
-17. **Future improvement:** retrain without `destination_port` as a robustness check; scale to the full dataset with more scalable algorithms.
-18. **Each member's track:** Member 1 = EDA & Preprocessing + shared `src/`; Member 2 = Classification; Member 3 = Regression + Clustering.
+- **Project:** CyberThreat-ML — intrusion detection, risk scoring, and behavioral clustering on network flow data.
+- **Dataset:** CICIDS2017 (Canadian Institute for Cybersecurity).
+- **Rows:** 2,830,743 raw → 2,520,798 cleaned.
+- **Features:** 78 raw → 79 after engineering.
+- **Target:** `label` (classification); custom risk score (regression).
+- **Classes:** 15.
+- **Regression target:** 0–100 behavior-based risk score (not a label lookup).
+- **Engineered feature:** `header_payload_ratio`.
+- **10 regression models:** Linear, Ridge, Lasso, ElasticNet, Polynomial, Decision Tree, Random Forest, Gradient Boosting, SVR, KNN Regression.
+- **5 Part-A classifiers:** Logistic Regression, KNN, Gaussian Naive Bayes, Decision Tree, SVM.
+- **5 Part-B classifiers:** Random Forest, AdaBoost, Gradient Boosting, Bagging, MLP.
+- **2 clustering models:** K-Means, Agglomerative Hierarchical Clustering.
+- **Main preprocessing:** train-only-fit scaling, stratified 80:20 split, IQR outlier check (kept), correlation pruning (clustering only).
+- **Metrics:** R²/RMSE/MAE; Accuracy/Precision/Recall/F1/ROC-AUC/confusion matrix; Silhouette/Davies-Bouldin/Calinski-Harabasz.
+- **Tuning:** `RandomizedSearchCV` + cross-validation, on Random Forest/Decision Tree (regression) and Random Forest/SVM/MLP (classification).
+- **Important visualizations:** 79-feature distribution grid, correlation heatmap, 2 scatter plots, residual/actual-vs-predicted plots, confusion-matrix grid, elbow curve, dendrogram, PCA/t-SNE cluster plots.
+- **Main findings:** Bagging won classification (F1 wtd 0.9873); Random Forest won regression (R² 0.9993 tuned); k=10 clusters, several behaviorally pure; severe class imbalance; real `destination_port` leakage risk.
+- **Main limitations:** stratified-sample training, not full dataset; regression R² partly a validation artifact; GUI not yet verified/deployed.
+- **GUI/deployment:** Streamlit app code exists, not yet verified running, not publicly deployed.
+- **Member 1:** EDA & Preprocessing + shared `src/`. **Member 2:** Classification. **Member 3:** Regression + Clustering.
+
+---
+
+## 21. Academic Integrity Note
+
+Per the official PDF: AI may assist with **code scaffolding**, not analysis or interpretation, and any AI assistance must be cited in the README (already done — see `README.md`'s "AI assistance disclosure" section).
+
+This document mixes three kinds of content, labelled throughout:
+- **[VERIFIED FACT]** — objectively checked against the code/notebooks/execution output.
+- **[ML CONCEPT]** — general algorithm/metric explanations, not project-specific claims.
+- **[TEAM TO CONFIRM]** — an honest reading of the data, but genuinely the team's job to personally verify, understand, and be able to defend as their own interpretation in viva — not to repeat verbatim as if it were spontaneously their own idea without having actually looked at the underlying plot/table themselves.
+
+Do not present the **[TEAM TO CONFIRM]** items in viva without having personally looked at the referenced plot or table first.
+
+---
+
+## 22. Final Audit — Every Official Requirement vs. Current Status
+
+| Requirement | Official PDF requirement | Current status | Evidence / location | Action needed |
+|---|---|---|---|---|
+| A1 (Review 1) | Shape, dtypes, missing-value counts, class distribution | **COMPLETE** | `01_EDA.ipynb` cells 8, 9, 11, 19 | None |
+| A2 (Review 1) | Distribution plot per feature, correlation heatmap, target distribution, ≥2 scatter plots | **COMPLETE** | `01_EDA.ipynb` cells 21, 28, 30–31, 33 | None |
+| A3 (Review 1) | Written observation per major plot | **COMPLETE** | Markdown cells after every plot, `01_EDA.ipynb` | None |
+| B1 (Review 1) | Missing values, duplicates, outliers checked & treated with justification | **COMPLETE** | `01_EDA.ipynb` cells 11–13; `src/preprocessing.py: clean_data(), check_outliers()` | None |
+| B2 (Review 1) | Categorical encoding, correct scaler (train-only fit), stratified split | **COMPLETE** | `src/preprocessing.py: scale_features(), split_data()`; no categorical features exist besides the label | None |
+| B3 (Review 1) | ≥1 engineered feature with written justification | **COMPLETE** | `header_payload_ratio`, `src/preprocessing.py: engineer_features()`, justified in `01_EDA.ipynb` | None |
+| C1 (Review 1) | All 10 regression algorithms trained, predict, no errors | **COMPLETE** | `03_Regression.ipynb`, verified 0 errors this session | None |
+| C2 (Review 1) | Single table, R²/RMSE/MAE, all 10, same test split, ranked by R² | **COMPLETE** | `03_Regression.ipynb` comparison table; SVR fixed to shared test split | None |
+| C3 (Review 1) | Tuning on ≥2 models, best params + improvement reported | **COMPLETE** | `03_Regression.ipynb` — added from scratch this session (was previously missing entirely) | None |
+| C4 (Review 1) | Residual + actual-vs-predicted plots; tree feature importance | **COMPLETE** | `03_Regression.ipynb` | None |
+| D1/Part A (Review 1) | All 5 Part-A algorithms trained, predict, no errors | **COMPLETE** | `02_Classification.ipynb`; SVM fixed to shared test split | None |
+| D2/Part A (Review 1) | Accuracy, weighted F1, confusion matrix per algorithm; preliminary table | **COMPLETE** | `02_Classification.ipynb` | None |
+| E1 (Review 1) | Clear narrative; all members can explain | **COMPLETE (doc), TEAM TO VERIFY (viva-readiness)** | Markdown headings + final summary sections added this session in all 4 notebooks | Team must actually rehearse — a document can't verify understanding |
+| Part B A1 (Review 2) | All 5 Part-B algorithms trained on same dataset as Part A, no errors | **COMPLETE** | `02_Classification.ipynb`, same `working_df`/split as Part A | None |
+| Part B A2 (Review 2) | Single table, all 10, Accuracy/Precision/Recall/F1/ROC-AUC | **COMPLETE** | `02_Classification.ipynb` comparison table includes all 5 required metrics (plus macro-F1 as a bonus column) | None |
+| Part B A3 (Review 2) | Best model justified; tuning applied; improvement in ≥1 metric documented | **COMPLETE** | Final-selection section, `02_Classification.ipynb` — Bagging justified as overall winner across 14 candidates | None |
+| B1 Clustering (Review 2) | Both algorithms fitted, cluster labels obtained, no errors | **COMPLETE** | `04_Clustering.ipynb` | None |
+| B2 Clustering (Review 2) | Silhouette/DB/CH for all algorithms; elbow curve; dendrogram | **COMPLETE** | `04_Clustering.ipynb` | None |
+| B3 Clustering (Review 2) | PCA 2D plot for every algorithm; t-SNE for ≥1 | **COMPLETE** | `04_Clustering.ipynb`: `kmeans_pca_2d.png`, `agglomerative_pca_2d.png`, `agglomerative_tsne.png` | None |
+| C1 Pipeline (Review 2) | Notebooks run top-to-bottom, no errors; modular; commented | **COMPLETE** | Verified via clean-kernel execution this session; `src/` modules used throughout | None |
+| C2 README (Review 2) | Dataset description, problem statement, results table, setup, how-to-run | **COMPLETE** | See Part 15 table above | None |
+| C3 GitHub (Review 2) | Meaningful commit history; requirements.txt present | **PARTIAL** | 4 real commits exist (not a bulk upload), but 3 most recent share an identical generic message | Make future commits descriptive; consider whether to address the existing ones |
+| D1 Presentation (Review 2) | Story arc, clear visualisations, well-organised | **COMPLETE (doc)** | This guide + notebook Markdown narrative | Team must build/rehearse actual slides or notebook walkthrough |
+| D2 Viva (Review 2) | All members demonstrate understanding | **NOT VERIFIABLE FROM CODE** | — | Team must rehearse; no document can certify this |
+| 7.1 General | `random_state=42` everywhere applicable | **COMPLETE** | Verified via grep across `src/` and all notebooks | None |
+| 7.2 General | Consistent split per track; CV for top-2; summary tables not scattered prints | **COMPLETE** | Fixed this session (SVM/SVR were the one violation found) | None |
+| 7.3 General | Titles/labels/legends; `tight_layout`; colourblind palettes | **COMPLETE, one noted deviation** | All plots comply; new 15-class scatter plots use `tab20` (not on the literal `tab10`/`Set2`/`colorblind` list, but a reasonable choice for 15 categories) | None required; could switch to `tab10` with repeated colors if the instructor is strict about the literal palette list |
+| 7.4 Team | One primary owner per complete track | **COMPLETE (assigned in this doc)** | Part 17 | Team must fill in real names and actually follow the assigned ownership |
+| 7.5 Academic integrity | External code cited; original analysis; AI usage cited in README | **COMPLETE, with a caveat** | `README.md` "AI assistance disclosure" section added this session; no external-sourced code found anywhere in the project | Team must personally review all **[TEAM TO CONFIRM]**-tagged interpretations in this document and in the notebooks before presenting them as their own |
+| Bonus +1 GUI | Working web interface returning predictions | **NOT VERIFIED** | `app/streamlit_app.py` exists, reads saved models, but was not run this session | Run `streamlit run app/streamlit_app.py` and confirm it works |
+| Bonus +1 Deployment | Publicly accessible URL | **NOT PRESENT** | No deployment config or URL found anywhere in the repo | Deploy if the team wants the bonus marks |
+
+### What is completely ready
+Every graded rubric line item across both reviews — Sections A/B/C/D of Review 1 and Sections A/B/C of Review 2 — is implemented, executes with zero errors (verified via a clean-kernel run this session), and is documented with real, non-fabricated results.
+
+### What is still missing
+- Descriptive, per-milestone commit messages (currently 3 recent commits share one generic message).
+- Verified, working Streamlit GUI (code exists, untested this session).
+- Public deployment (does not exist).
+
+### What must be personally checked before submission
+- Every **[TEAM TO CONFIRM]**-tagged claim in this document (feature-engineering evidence, cluster interpretation, EDA observations) — look at the actual plot/table yourselves.
+- That the Streamlit app actually runs (`streamlit run app/streamlit_app.py`).
+- Real team member names filled into Part 17/Part 20 in place of the placeholders.
+
+### What each member must study first
+- **Member 1:** `01_EDA.ipynb` top to bottom, plus `src/preprocessing.py`.
+- **Member 2:** `02_Classification.ipynb` top to bottom, especially the tuning and SMOTE sections.
+- **Member 3:** `03_Regression.ipynb` and `04_Clustering.ipynb` top to bottom, especially `src/risk_score.py` and the linkage-comparison logic.
